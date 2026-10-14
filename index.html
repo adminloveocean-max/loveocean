@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Love Ocean</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Love Ocean: tulis satu pesan hangat, masukkan ke botol, dan lepas ke laut. Seseorang akan menemukannya dan membalas.">
+<meta name="theme-color" content="#151142">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:title" content="Love Ocean">
+<meta property="og:description" content="Tulis satu pesan hangat. Lepas ke laut. Seseorang akan menemukannya.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e6fbff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#a9dbe8" stop-opacity=".22"/>
+    </linearGradient>
+  </defs>
+  <symbol id="bottle" viewBox="0 0 48 80">
+    <rect x="18.5" y="1.5" width="11" height="10" rx="2.4" fill="#c98f5a"/>
+    <rect x="20" y="3" width="3" height="7" rx="1.2" fill="#e3b384" opacity=".8"/>
+    <path d="M17 11h14v8c0 3.4 11 5.6 11 14.5V66a8 8 0 0 1-8 8H14a8 8 0 0 1-8-8V33.500C6 24.600 17 22.400 17 19z" fill="url(#glass)" stroke="#f3fdff" stroke-opacity=".9" stroke-width="1.6" stroke-linejoin="round"/>
+    <rect x="14" y="38" width="20" height="26" rx="2" fill="#fff4e0"/>
+    <path d="M24 58.500c-8.500-5.600-6.500-12.600 0-9.600 6.500-3 8.500 4 0 9.600z" fill="currentColor"/>
+    <path d="M10.500 36v24" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19.500c-8-5.200-6.200-11.800 0-8.800 6.200-3 8 3.600 0 8.800z" fill="currentColor"/></symbol>
+  <symbol id="i-shell" viewBox="0 0 24 24"><path d="M12 3c-4.500 0-8 3.600-8 8.200 0 3.500 2 6.300 4.500 7.600L12 21l3.500-2.200C18 17.500 20 14.700 20 11.200 20 6.600 16.500 3 12 3z M12 3v18 M12 3C9.500 6 8.300 8.500 8.500 18.800 M12 3c2.500 3 3.700 5.500 3.500 15.800" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M3 6.500A1.500 1.500 0 0 1 4.500 5h15A1.500 1.500 0 0 1 21 6.500v11a1.500 1.500 0 0 1-1.500 1.500h-15A1.500 1.500 0 0 1 3 17.500z M3.500 6.500 12 13l8.500-6.500" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M9.500 3h5v3l2.200 2.500c.5.600.8 1.300.8 2.100V19a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-8.400c0-.8.300-1.500.8-2.100L9.500 6z M9.500 3h5 M9.500 14.500c1.200-1.200 2.300-.2 2.500.6.200-.8 1.300-1.800 2.500-.6 1.100 1.100-.2 2.300-2.500 3.900-2.300-1.600-3.600-2.800-2.500-3.900z" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.500v5h3.500L12 18.500v-13L7.500 9.500z M15.500 9a4 4 0 0 1 0 6 M18 6.500a7.500 7.500 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.500v5h3.500L12 18.500v-13L7.500 9.500z M16 9.500l5 5 M21 9.500l-5 5" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="app">
+  <main class="scene" aria-label="Laut saat senja dengan botol pesan yang mengapung">
+    <div class="sky" aria-hidden="true">
+      <div class="stars s1"></div>
+      <div class="stars s2"></div>
+      <div class="shooting"></div>
+      <div class="cloud c1"></div>
+      <div class="cloud c2"></div>
+      <div class="halo"></div>
+      <div class="sun"></div>
+      <svg class="boat" viewBox="0 0 60 44" aria-hidden="true"><path d="M30 2v28H12z M33 8v22h15z" fill="#24124a"/><path d="M4 32h52l-7 9H12z" fill="#24124a"/></svg>
+    </div>
+    <div class="sea" id="sea">
+      <div class="shimmer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="waves back" id="wavesBack" aria-hidden="true"></div>
+      <div class="bottles" id="bottles"></div>
+      <div class="waves front" id="wavesFront" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <header class="top">
+    <div class="brand">
+      <h1>Love Ocean</h1>
+      <p class="tagline">Tulis satu pesan. Lepas ke laut.</p>
+    </div>
+    <div class="top-btns">
+      <button id="installBtn" class="install" type="button" hidden>Pasang</button>
+      <button id="btnSound" class="round" type="button" aria-pressed="false" aria-label="Nyalakan suara ombak">
+        <svg class="ic" aria-hidden="true"><use id="soundIcon" href="#i-mute"/></svg>
+      </button>
+      <button id="btnInfo" class="round" type="button" aria-label="Tentang dan privasi">
+        <span class="ital" aria-hidden="true">i</span>
+      </button>
+    </div>
+  </header>
+
+  <p class="pill" id="seaInfo" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="seaText">Menghubungkan ke laut...</span></p>
+
+  <nav class="dock" aria-label="Menu utama">
+    <button class="dock-btn" id="btnTake" type="button">
+      <svg class="ic" aria-hidden="true"><use href="#i-shell"/></svg>
+      <span>Ambil</span>
+    </button>
+    <button class="dock-btn main" id="btnThrow" type="button">
+      <svg class="ic" aria-hidden="true"><use href="#i-send"/></svg>
+      <span>Lempar satu</span>
+    </button>
+    <button class="dock-btn" id="btnMine" type="button">
+      <span class="ico-wrap">
+        <svg class="ic" aria-hidden="true"><use href="#i-bottle"/></svg>
+        <b class="badge" id="badge" hidden>0</b>
+      </span>
+      <span>Botolku</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Pertama kali -->
+<dialog id="dlgWelcome" aria-labelledby="tWelcome">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tWelcome">Selamat datang di Love Ocean</h2>
+  <p class="hint first">Tidak perlu daftar. Kamu tetap anonim, dan hanya satu orang yang membaca botolmu.</p>
+  <ol class="steps">
+    <li><b>Tulis</b> pesan hangat, pilih suasananya, lalu lempar ke laut.</li>
+    <li><b>Botolmu hanyut</b> sampai seseorang menemukannya.</li>
+    <li><b>Balasannya</b> muncul di Botolku. Kamu juga bisa mengambil botol orang lain.</li>
+  </ol>
+  <div class="row">
+    <button class="btn primary" id="welcomeGo" type="button">Mulai</button>
+  </div>
+</dialog>
+
+<!-- Lempar satu -->
+<dialog id="dlgThrow" aria-labelledby="tThrow">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tThrow">Lempar satu botol</h2>
+  <fieldset class="moods" id="moodPick">
+    <legend>Suasana pesanmu</legend>
+  </fieldset>
+  <label for="inName">Nama panggilan (boleh dikosongkan)</label>
+  <input id="inName" type="text" maxlength="30" autocomplete="off" placeholder="Contoh: Pelaut Rindu">
+  <label for="inMsg">Pesanmu</label>
+  <textarea id="inMsg" maxlength="280" rows="5" placeholder="Tulis sesuatu yang hangat..."></textarea>
+  <div class="count" id="count" aria-live="polite">0 / 280</div>
+  <p class="hint">Botolmu hanyut dan ditemukan satu orang. Jangan tulis nomor telepon, tautan, atau akun media sosial: pesan seperti itu ditolak.</p>
+  <div class="row">
+    <button class="btn ghost" type="button" data-close>Batal</button>
+    <button class="btn primary" id="doThrow" type="button">Lempar ke laut</button>
+  </div>
+</dialog>
+
+<!-- Satu botol (Ambil dan Botolku) -->
+<dialog id="dlgBottle" aria-labelledby="tBottle">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tBottle">Sebuah botol</h2>
+  <div class="note" id="bNote">
+    <span class="seal" id="bSeal" aria-hidden="true"><svg class="ic"><use href="#i-heart"/></svg></span>
+    <p class="note-mood" id="bMood"></p>
+    <p class="note-text" id="bText"></p>
+    <p class="note-from" id="bFrom"></p>
+  </div>
+  <div id="bThread" class="thread" aria-live="polite"></div>
+  <div id="bReplyBox">
+    <label for="inReply">Balasanmu</label>
+    <textarea id="inReply" maxlength="280" rows="3" placeholder="Tulis balasan..."></textarea>
+    <div class="count" id="countR">0 / 280</div>
+    <button class="btn primary full" id="doReply" type="button">Kirim balasan</button>
+  </div>
+  <p class="hint" id="bHint"></p>
+  <div class="row wrap">
+    <button class="btn ghost" id="bRelease" type="button" hidden>Lepas kembali</button>
+    <button class="btn ghost" id="bReport" type="button">Laporkan</button>
+    <button class="btn ghost" id="bDelete" type="button" hidden>Hapus botol</button>
+    <button class="btn ghost" type="button" data-close>Tutup</button>
+  </div>
+</dialog>
+
+<!-- Botolku -->
+<dialog id="dlgMine" aria-labelledby="tMine">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tMine">Botolku</h2>
+  <p class="hint first">Botol yang kamu lempar dan botol yang kamu temukan.</p>
+  <div id="mineList" class="list"></div>
+  <div class="row">
+    <button class="btn ghost" type="button" data-close>Tutup</button>
+    <button class="btn primary" id="mineThrow" type="button">Lempar satu</button>
+  </div>
+</dialog>
+
+<!-- Info -->
+<dialog id="dlgInfo" aria-labelledby="tInfo">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tInfo">Tentang Love Ocean</h2>
+  <p class="hint first">Pesan bersifat anonim. Kamu masuk otomatis tanpa daftar, memakai akun anonim yang tersimpan di perangkat ini. Jika data browser atau aplikasi dihapus, akun anonimmu ikut hilang.</p>
+  <p class="hint">Pesan yang melanggar bisa dilaporkan lewat tombol Laporkan. Botol yang dilaporkan langsung disembunyikan.</p>
+  <p class="hint" id="iosHint" hidden>Di iPhone: ketuk Bagikan, lalu pilih Tambah ke Layar Utama.</p>
+  <p class="hint"><a href="/privacy.html" class="lnk">Kebijakan privasi dan ketentuan</a></p>
+  <div class="row col">
+    <button class="btn ghost" id="btnShare" type="button">Ajak teman ke laut</button>
+    <button class="btn danger" id="btnWipe" type="button">Hapus semua data saya</button>
+    <button class="btn ghost" type="button" data-close>Tutup</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/config.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
