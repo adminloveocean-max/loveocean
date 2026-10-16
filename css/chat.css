@@ -1,0 +1,81 @@
+/* Fitur chat: pemisah tanggal, menu pesan, pesan dihapus, mode ubah */
+
+.daysep {
+  align-self: center;
+  width: fit-content;
+  margin: 12px auto 6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .72);
+  background: rgba(255, 255, 255, .09);
+  text-align: center;
+}
+
+.bubble[role="button"] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bubble[role="button"]:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, .65);
+  outline-offset: 2px;
+}
+
+.bubble.gone .bt {
+  font-style: italic;
+  opacity: .65;
+}
+
+.msgmenu {
+  display: flex;
+  align-self: stretch;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.msgmenu.me { justify-content: flex-end; }
+.msgmenu.them { justify-content: flex-start; }
+
+.msgmenu .mm {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(255, 255, 255, .1);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 8px 14px;
+  min-height: 36px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.msgmenu .mm:hover { background: rgba(255, 255, 255, .16); }
+.msgmenu .mm.danger {
+  color: #ff8aa5;
+  border-color: rgba(255, 138, 165, .4);
+}
+
+.editbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 6px;
+  padding: 6px 10px 6px 12px;
+  font-size: 13px;
+  border-left: 3px solid #ff5f84;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .07);
+}
+.editbar[hidden] { display: none; }
+.editbar-x {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  padding: 6px 4px;
+  cursor: pointer;
+}
