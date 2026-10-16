@@ -1,11 +1,23 @@
-const CACHE = 'love-ocean-v3';
+// Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya pengguna mendapat versi terbaru.
+const CACHE = 'love-ocean-v5';
+
+// Harus sama dengan yang dimuat index.html (css/..., js/...).
 const ASSETS = [
-  '/', '/index.html', '/style.css', '/app.js', '/config.js', '/privacy.html', '/privacy.css', '/manifest.json',
+  '/', '/index.html',
+  '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css',
+  '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js',
+  '/privacy.html', '/privacy.css', '/manifest.json',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png', '/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      // Satu per satu: file yang tidak ada tidak lagi menggagalkan seluruh pemasangan.
+      // cache: 'reload' memastikan yang disimpan adalah versi terbaru dari server.
+      .then((c) => Promise.allSettled(ASSETS.map((u) => c.add(new Request(u, { cache: 'reload' })))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -18,11 +30,17 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Perantara API (API_BASE: '/sb') dan fungsi AI (/api/) jangan pernah disimpan: isinya percakapan dan butuh data terbaru.
+  if (url.pathname.startsWith('/sb/') || url.pathname.startsWith('/api/')) return;
+
+  // Halaman admin tidak boleh disimpan. Tanpa ini, tersimpan di kunci '/index.html' dan menimpa halaman utama saat offline.
+  if (url.pathname === '/admin' || url.pathname === '/admin.html') return;
 
   // Halaman: coba internet dulu, kalau offline pakai salinan tersimpan.
   if (req.mode === 'navigate') {
-    const url = new URL(req.url);
     const key = url.pathname === '/privacy.html' ? '/privacy.html' : '/index.html';
     e.respondWith(
       fetch(req).then((res) => {

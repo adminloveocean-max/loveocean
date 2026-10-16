@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Admin Love Ocean</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#151142">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="bar">
+  <h1>Admin Love Ocean</h1>
+  <button class="ghost" id="btnOut" type="button" hidden>Keluar</button>
+</header>
+
+<main class="wrap">
+
+  <!-- Masuk -->
+  <section class="panel" id="viewLogin" hidden>
+    <h2>Masuk admin</h2>
+    <p class="muted">Masuk dengan email akun adminmu. Kode verifikasi dikirim ke email itu.</p>
+    <div id="step1">
+      <label for="email">Email</label>
+      <input id="email" type="email" inputmode="email" autocomplete="email" maxlength="120" placeholder="nama@email.com">
+      <button class="primary" id="btnSend" type="button">Kirim kode</button>
+    </div>
+    <div id="step2" hidden>
+      <p class="muted" id="sentTo"></p>
+      <label for="code">Kode verifikasi</label>
+      <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000">
+      <button class="primary" id="btnVerify" type="button">Masuk</button>
+      <button class="link" id="btnBack" type="button">Ganti email</button>
+    </div>
+    <p class="err" id="loginErr" role="alert"></p>
+  </section>
+
+  <!-- Bukan admin -->
+  <section class="panel" id="viewDenied" hidden>
+    <h2>Akun ini bukan admin</h2>
+    <p class="muted">Tambahkan akunmu ke tabel <code>admins</code> di Supabase (lihat catatan di akhir <code>schema.sql</code>), lalu muat ulang halaman ini.</p>
+  </section>
+
+  <!-- Antrean laporan -->
+  <section id="viewQueue" hidden>
+    <nav class="tabs" role="tablist" aria-label="Daftar laporan">
+      <button class="tab" role="tab" data-tab="tinjau" type="button">Perlu ditinjau <b id="cTinjau">0</b></button>
+      <button class="tab" role="tab" data-tab="ai" type="button">Dipulihkan AI <b id="cAi">0</b></button>
+      <button class="tab" role="tab" data-tab="selesai" type="button">Selesai <b id="cSelesai">0</b></button>
+    </nav>
+    <p class="note" id="tabNote"></p>
+    <div id="list" class="list" aria-live="polite"></div>
+    <button class="ghost wide" id="btnRefresh" type="button">Muat ulang</button>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
