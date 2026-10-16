@@ -2,7 +2,13 @@
   'use strict';
 
   const CFG = window.LO_CONFIG || {};
-  const CONFIGURED = !!(CFG.SUPABASE_URL && CFG.SUPABASE_KEY && !/GANTI/.test(CFG.SUPABASE_URL + CFG.SUPABASE_KEY));
+  // Dua cara menyambung: langsung ke Supabase (SUPABASE_URL + SUPABASE_KEY), atau lewat perantara
+  // Cloudflare di alamat yang sama (API_BASE: '/sb'), sehingga URL dan kunci tidak ada di browser.
+  const PROXY = !!CFG.API_BASE;
+  const BASE = (PROXY ? CFG.API_BASE : CFG.SUPABASE_URL || '').replace(/\/$/, '');
+  const KEY = PROXY ? '' : (CFG.SUPABASE_KEY || '');
+  const CONFIGURED = PROXY || !!(CFG.SUPABASE_URL && CFG.SUPABASE_KEY && !/GANTI/.test(CFG.SUPABASE_URL + CFG.SUPABASE_KEY));
+  const withKey = (h) => (KEY ? Object.assign({ apikey: KEY }, h) : h);
   const MAX = 280;
   // Kunci sesi dan nama tetap sama dengan versi sebelumnya supaya akun anonim lama tetap terbaca.
   const K = {
@@ -83,6 +89,19 @@
     d.style.setProperty('--mood', moodOf(key).color);
     return d;
   }
+  // Penjelasan penyebab gagal tersambung, supaya pemilik tahu apa yang harus diperbaiki.
+  function diagnose(e) {
+    const m = ((e && e.message) || '') + ' ' + ((e && e.code) || '');
+    if (!navigator.onLine) return 'Kamu sedang offline. Sambungkan internet lalu coba lagi.';
+    if (/anonymous sign-ins are disabled|anonymous.*disabled/i.test(m)) return 'Masuk anonim belum diaktifkan di Supabase (Authentication > Sign In / Providers > Allow anonymous sign-ins).';
+    if (/proxy belum dikonfigurasi/i.test(m)) return 'Perantara belum diatur: isi SUPABASE_URL dan SUPABASE_KEY di pengaturan Cloudflare Pages, lalu deploy ulang.';
+    if (/PGRST202|could not find the function/i.test(m)) return 'Database belum diperbarui. Jalankan supabase/schema.sql di SQL Editor Supabase.';
+    if (/42501|permission denied/i.test(m)) return 'Hak akses database belum sesuai. Jalankan ulang supabase/schema.sql.';
+    if (/invalid api key|no api key|apikey/i.test(m) || (e && (e.status === 401 || e.status === 403))) return PROXY ? 'Perantara Cloudflare menolak. Periksa variabel SUPABASE_URL dan SUPABASE_KEY di pengaturan Cloudflare Pages.' : 'Kunci Supabase di config.js tidak diterima. Periksa SUPABASE_URL dan SUPABASE_KEY.';
+    if (e && e.name === 'AbortError') return 'Server terlalu lama menjawab. Coba lagi sebentar lagi.';
+    if (e && e.name === 'TypeError') return PROXY ? 'Server tidak bisa dijangkau. Periksa koneksi, lalu coba lagi.' : 'Supabase tidak bisa dijangkau. Periksa SUPABASE_URL di config.js, dan pastikan project tidak sedang dijeda (paused).';
+    return human(e);
+  }
   const locks = new Set();
   async function once(name, fn) {
     if (locks.has(name)) return;
@@ -95,9 +114,9 @@
   let sessionJob = null;
 
   async function authCall(path, body) {
-    const res = await fetch(CFG.SUPABASE_URL + '/auth/v1/' + path, {
+    const res = await fetch(BASE + '/auth/v1/' + path, {
       method: 'POST',
-      headers: { apikey: CFG.SUPABASE_KEY, 'Content-Type': 'application/json' },
+      headers: withKey({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
@@ -130,15 +149,14 @@
     const timer = setTimeout(() => ctl.abort(), 15000);
     let res;
     try {
-      res = await fetch(CFG.SUPABASE_URL + path, {
+      res = await fetch(BASE + path, {
         method: opt.method || 'GET',
         signal: ctl.signal,
-        headers: {
-          apikey: CFG.SUPABASE_KEY,
+        headers: withKey({
           Authorization: 'Bearer ' + s.access_token,
           'Content-Type': 'application/json',
           Prefer: 'return=representation'
-        },
+        }),
         body: opt.body ? JSON.stringify(opt.body) : undefined
       });
     } finally { clearTimeout(timer); }
@@ -149,12 +167,30 @@
     if (!res.ok) {
       const err = new Error((data && (data.message || data.msg)) || res.statusText);
       err.status = res.status;
+      err.code = data && data.code;
       throw err;
     }
     return data;
   }
   const rpc = (name, body) => api('/rest/v1/rpc/' + name, { method: 'POST', body: body || {} });
   const myId = () => (session && session.user && session.user.id) || '';
+
+  // Panggilan ke endpoint auth (dipakai js/account.js): PUT user, POST otp, POST verify, dll.
+  async function authReq(method, path, body, withToken) {
+    const headers = withKey({ 'Content-Type': 'application/json' });
+    if (withToken) { const s = await ensureSession(); headers.Authorization = 'Bearer ' + s.access_token; }
+    const res = await fetch(BASE + '/auth/v1/' + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    const txt = await res.text();
+    let data = null;
+    try { data = txt ? JSON.parse(txt) : null; } catch (e) { /* bukan JSON */ }
+    if (!res.ok) {
+      const err = new Error((data && (data.msg || data.message || data.error_description)) || res.statusText);
+      err.status = res.status;
+      err.code = data && (data.error_code || data.code);
+      throw err;
+    }
+    return data;
+  }
 
   /* ---------- ombak ---------- */
   function wavePath(a) {
@@ -220,7 +256,7 @@
       const v = await rpc('sea_view');
       sea = { count: Number(v && v.count) || 0, moods: Array.isArray(v && v.moods) ? v.moods : [] };
       renderSea();
-    } catch (e) { setStatus(false, 'Belum tersambung ke server. ' + human(e)); }
+    } catch (e) { setStatus(false, 'Belum tersambung ke server. ' + diagnose(e)); }
   }
 
   /* ---------- botolku & penanda balasan baru ---------- */
@@ -243,7 +279,7 @@
   }
   async function loadMine() {
     myBottles = await api('/rest/v1/bottles?select=*&order=created_at.desc&limit=100');
-    myReplyMeta = await api('/rest/v1/replies?select=bottle_id,author,created_at&order=created_at.desc&limit=500');
+    myReplyMeta = await api('/rest/v1/replies?select=bottle_id,author,nickname,message,created_at&order=created_at.desc&limit=500');
     updateBadge();
   }
 
@@ -251,6 +287,7 @@
   let mood = 'cinta';
   function buildMoods() {
     const box = $('#moodPick');
+    if (!box) return; // pilihan suasana dihilangkan dari tampilan; semua botol memakai 'cinta'
     Object.keys(MOODS).forEach((key) => {
       const lab = el('label', 'chip');
       lab.style.setProperty('--mood', MOODS[key].color);
@@ -275,6 +312,7 @@
   }
   function openThrow() {
     $('#dlgMine').close();
+    if (window.LOMine) window.LOMine.close();
     const d = lsGet(K.draft, {});
     $('#inName').value = d.name != null ? d.name : lsGet(K.name, '');
     $('#inMsg').value = d.text || '';
@@ -331,7 +369,22 @@
       row.appendChild(el('span', 'bm', (mine ? 'Kamu' : (r.nickname || 'Anonim')) + ', ' + ago(r.created_at)));
       t.appendChild(row);
     });
-    t.scrollTop = t.scrollHeight;
+    toBottom();
+  }
+  function toBottom() {
+    const s = $('#bScroll');
+    if (s) requestAnimationFrame(() => { s.scrollTop = s.scrollHeight; });
+  }
+  function growReply() {
+    const t = $('#inReply');
+    t.style.height = 'auto';
+    // saat dialog masih tertutup, scrollHeight = 0: biarkan tinggi mengikuti min-height di CSS
+    if (!t.scrollHeight) { t.style.height = ''; return; }
+    const cs = getComputedStyle(t);
+    const border = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    const h = Math.min(t.scrollHeight + border, 112);
+    t.style.height = h + 'px';
+    t.style.overflowY = t.scrollHeight + border > 112 ? 'auto' : 'hidden';
   }
   async function loadReplies() {
     if (!cur || document.visibilityState !== 'visible') return;
@@ -343,18 +396,17 @@
   }
   function openBottle(b) {
     cur = b;
+    $('#bMenuBox').hidden = true;
     const iAmAuthor = b.author === myId();
     const m = moodOf(b.mood);
     $('#bNote').style.setProperty('--mood', m.color);
-    $('#tBottle').textContent = iAmAuthor ? 'Botol yang kamu lempar' : 'Botol yang kamu temukan';
-    const mo = $('#bMood');
-    mo.textContent = '';
-    mo.appendChild(moodDot(b.mood));
-    mo.appendChild(document.createTextNode(m.label));
+    $('#bNote').className = 'bubble first ' + (iAmAuthor ? 'me' : 'them');
+    $('#bAvatar').style.setProperty('--mood', m.color);
+    $('#tBottle').textContent = iAmAuthor ? 'Botol yang kamu lempar' : (b.nickname || 'Seseorang di tepi laut');
     $('#bText').textContent = b.message;
     $('#bFrom').textContent = iAmAuthor
-      ? 'Dari kamu' + (b.nickname ? ' (' + b.nickname + ')' : '')
-      : 'Dari ' + (b.nickname || 'seseorang di tepi laut');
+      ? 'Dari kamu' + (b.nickname ? ' (' + b.nickname + ')' : '') + ', ' + ago(b.created_at)
+      : 'Dari ' + (b.nickname || 'seseorang di tepi laut') + ', ' + ago(b.created_at);
     $('#bRelease').hidden = iAmAuthor;
     $('#bDelete').hidden = !iAmAuthor;
     $('#bReport').hidden = !!b.hidden;
@@ -365,9 +417,12 @@
         ? (b.caught_by ? 'Seseorang menemukan botolmu. Percakapan ini hanya terlihat olehmu dan dia.' : 'Botolmu masih hanyut. Belum ada yang menemukannya.')
         : 'Hanya kamu dan pembuat botol yang bisa melihat percakapan ini.';
     $('#inReply').value = '';
+    growReply();
     $('#countR').textContent = '0 / ' + MAX;
     $('#bThread').textContent = '';
     openDlg($('#dlgBottle'));
+    growReply();
+    $('#bScroll').scrollTop = 0;
     loadReplies();
     clearInterval(pollTimer);
     pollTimer = setInterval(loadReplies, 6000);
@@ -382,6 +437,7 @@
       try {
         await api('/rest/v1/replies', { method: 'POST', body: { bottle_id: cur.id, nickname: lsGet(K.name, ''), message: text } });
         $('#inReply').value = '';
+        growReply();
         $('#countR').textContent = '0 / ' + MAX;
         await loadReplies();
       } catch (e) { toast(human(e), 5000); }
@@ -570,21 +626,30 @@
   /* ---------- event ---------- */
   $('#btnTake').addEventListener('click', () => take(null));
   $('#btnThrow').addEventListener('click', openThrow);
-  $('#btnMine').addEventListener('click', openMine);
+  $('#btnMine').addEventListener('click', () => { if (window.LOMine) window.LOMine.open(); else openMine(); });
   $('#btnInfo').addEventListener('click', () => openDlg($('#dlgInfo')));
   $('#doThrow').addEventListener('click', doThrow);
   $('#doReply').addEventListener('click', doReply);
   $('#mineThrow').addEventListener('click', openThrow);
   $('#inMsg').addEventListener('input', () => { updateCount(); saveDraft(); });
   $('#inName').addEventListener('input', saveDraft);
-  $('#inReply').addEventListener('input', () => { $('#countR').textContent = $('#inReply').value.length + ' / ' + MAX; });
+  $('#inReply').addEventListener('input', () => { $('#countR').textContent = $('#inReply').value.length + ' / ' + MAX; growReply(); });
   $('#inMsg').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doThrow(); });
-  $('#inReply').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) doReply(); });
+  // Di komputer, Enter mengirim (Shift+Enter baris baru). Di layar sentuh, Enter tetap baris baru.
+  $('#inReply').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    const desktop = window.matchMedia && matchMedia('(pointer:fine)').matches;
+    if ((desktop && !e.shiftKey) || e.ctrlKey || e.metaKey) { e.preventDefault(); doReply(); }
+  });
   document.querySelectorAll('dialog').forEach((d) => {
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     d.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => d.close()));
   });
   $('#dlgBottle').addEventListener('close', closeBottle);
+  // menu titik tiga di header chat
+  $('#bMenu').addEventListener('click', (e) => { e.stopPropagation(); const m = $('#bMenuBox'); m.hidden = !m.hidden; });
+  document.addEventListener('click', (e) => { const m = $('#bMenuBox'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; });
+  $('#dlgBottle').addEventListener('close', () => { $('#bMenuBox').hidden = true; });
   $('#welcomeGo').addEventListener('click', () => $('#dlgWelcome').close());
   $('#dlgWelcome').addEventListener('close', () => lsSet(K.welcome, true));
   document.addEventListener('visibilitychange', () => {
@@ -603,8 +668,26 @@
     }
     setDock(false);
     try { await ensureSession(); await Promise.all([refreshSea(), loadMine()]); }
-    catch (e) { setStatus(false, 'Belum tersambung ke server. ' + human(e)); }
+    catch (e) { setStatus(false, 'Belum tersambung ke server. ' + diagnose(e)); }
   }
+
+  // Jembatan untuk js/mine.js (halaman Botolku)
+  window.LO = {
+    get bottles() { return myBottles; },
+    get replies() { return myReplyMeta; },
+    unreadFor, myId, moodOf, ago, loadMine, openBottle, human, openThrow, toast, openDlg, authReq,
+    get session() { return session; },
+    setSession(s) { session = s; lsSet(K.session, s); },
+    // dipanggil setelah masuk/menyimpan akun: muat ulang data milik akun ini
+    afterAuth() { myBottles = []; myReplyMeta = []; updateBadge(); refreshSea(); loadMine().catch(() => {}); },
+    async signOut() {
+      try { await authReq('POST', 'logout', null, true); } catch (e) { /* abaikan */ }
+      lsDel(K.session);
+      session = null;
+      myBottles = []; myReplyMeta = []; updateBadge();
+      await start();
+    }
+  };
 
   buildWaves();
   buildMoods();
