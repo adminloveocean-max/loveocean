@@ -1,0 +1,13 @@
+/* Love Ocean: akun opsional (simpan akun / masuk dengan kode email). Dipakai oleh js/account.js */
+.acct{margin-top:14px;padding:14px;border-radius:16px;background:rgba(238,240,255,.07);border:1px solid rgba(238,240,255,.16)}
+.acct .hint{margin:0 0 10px}
+.acct .btn{width:100%}
+.acct-email{display:inline-block;max-width:100%;overflow-wrap:anywhere;color:var(--peach);font-weight:700}
+#dlgAccount .hint{margin-top:6px}
+#dlgAccount input[type=text],#dlgAccount input[type=email]{width:100%;padding:12px 14px;border-radius:14px;border:1.5px solid rgba(238,240,255,.25);background:rgba(8,12,38,.5);color:var(--foam);font:inherit;font-size:16px}
+#dlgAccount input:focus{outline:none;border-color:var(--heart)}
+.code-in{text-align:center;font-size:26px!important;letter-spacing:.35em;font-weight:700;padding-left:calc(14px + .35em)!important}
+.link-btn{display:block;margin:12px auto 0;padding:8px 10px;border:0;background:none;color:var(--peach);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.link-btn:disabled{opacity:.55;text-decoration:none;cursor:default}
+.acct-err{margin:10px 0 0;font-size:13.5px;line-height:1.5;color:#ffb3c6}
+.acct-err:empty{display:none}
