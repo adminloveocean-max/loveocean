@@ -16,6 +16,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/mine.css">
+<link rel="stylesheet" href="css/account.css">
 </head>
 <body>
 
@@ -99,6 +101,20 @@
   </nav>
 </div>
 
+<!-- Botolku: halaman layar penuh (css/mine.css, js/mine.js) -->
+<section class="mine-page" id="pageMine" hidden aria-labelledby="tMinePage">
+  <header class="mine-bar">
+    <button class="mine-back" id="mineBack" type="button" aria-label="Kembali">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5 M11 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <h2 id="tMinePage">Botolku</h2>
+  </header>
+  <div class="mine-list" id="mineChats" role="list"></div>
+  <button class="mine-fab" id="mineFab" type="button" aria-label="Lempar satu botol">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg>
+  </button>
+</section>
+
 <!-- Pertama kali -->
 <dialog id="dlgWelcome" aria-labelledby="tWelcome">
   <div class="grab" aria-hidden="true"></div>
@@ -118,9 +134,6 @@
 <dialog id="dlgThrow" aria-labelledby="tThrow">
   <div class="grab" aria-hidden="true"></div>
   <h2 id="tThrow">Lempar satu botol</h2>
-  <fieldset class="moods" id="moodPick">
-    <legend>Suasana pesanmu</legend>
-  </fieldset>
   <label for="inName">Nama panggilan (boleh dikosongkan)</label>
   <input id="inName" type="text" maxlength="30" autocomplete="off" placeholder="Contoh: Pelaut Rindu">
   <label for="inMsg">Pesanmu</label>
@@ -134,28 +147,42 @@
 </dialog>
 
 <!-- Satu botol (Ambil dan Botolku) -->
-<dialog id="dlgBottle" aria-labelledby="tBottle">
-  <div class="grab" aria-hidden="true"></div>
-  <h2 id="tBottle">Sebuah botol</h2>
-  <div class="note" id="bNote">
-    <span class="seal" id="bSeal" aria-hidden="true"><svg class="ic"><use href="#i-heart"/></svg></span>
-    <p class="note-mood" id="bMood"></p>
-    <p class="note-text" id="bText"></p>
-    <p class="note-from" id="bFrom"></p>
+<dialog id="dlgBottle" class="chat" aria-labelledby="tBottle">
+  <header class="chat-head">
+    <button class="chat-back" type="button" data-close aria-label="Kembali">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H5 M11 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span class="chat-avatar" id="bAvatar" aria-hidden="true"><svg class="ic"><use href="#i-heart"/></svg></span>
+    <div class="chat-title">
+      <h2 id="tBottle">Sebuah botol</h2>
+      <p class="chat-sub" id="bHint"></p>
+    </div>
+    <button class="chat-more" id="bMenu" type="button" aria-label="Menu lainnya" aria-haspopup="true">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="19" r="2" fill="currentColor"/></svg>
+    </button>
+    <div class="chat-menu" id="bMenuBox" hidden>
+      <button class="mini" id="bRelease" type="button" hidden>Lepas kembali</button>
+      <button class="mini" id="bReport" type="button">Laporkan</button>
+      <button class="mini" id="bDelete" type="button" hidden>Hapus botol</button>
+    </div>
+  </header>
+
+  <div class="chat-body" id="bScroll">
+    <div class="bubble first" id="bNote">
+      <p class="bt" id="bText"></p>
+      <span class="bm" id="bFrom"></span>
+    </div>
+    <div id="bThread" class="thread" aria-live="polite"></div>
   </div>
-  <div id="bThread" class="thread" aria-live="polite"></div>
-  <div id="bReplyBox">
-    <label for="inReply">Balasanmu</label>
-    <textarea id="inReply" maxlength="280" rows="3" placeholder="Tulis balasan..."></textarea>
+
+  <div class="composer" id="bReplyBox">
+    <div class="composer-row">
+      <textarea id="inReply" maxlength="280" rows="1" placeholder="Tulis balasan..." aria-label="Balasanmu"></textarea>
+      <button class="send" id="doReply" type="button" aria-label="Kirim balasan">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 17-3-7z M11 14l9-10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      </button>
+    </div>
     <div class="count" id="countR">0 / 280</div>
-    <button class="btn primary full" id="doReply" type="button">Kirim balasan</button>
-  </div>
-  <p class="hint" id="bHint"></p>
-  <div class="row wrap">
-    <button class="btn ghost" id="bRelease" type="button" hidden>Lepas kembali</button>
-    <button class="btn ghost" id="bReport" type="button">Laporkan</button>
-    <button class="btn ghost" id="bDelete" type="button" hidden>Hapus botol</button>
-    <button class="btn ghost" type="button" data-close>Tutup</button>
   </div>
 </dialog>
 
@@ -171,6 +198,34 @@
   </div>
 </dialog>
 
+<!-- Akun opsional -->
+<dialog id="dlgAccount" aria-labelledby="tAccount">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tAccount">Simpan akunku</h2>
+  <p class="hint first" id="acctIntro"></p>
+  <p class="hint" id="acctWarn" hidden>Catatan: botol dari akun anonim di perangkat ini tidak ikut pindah ke akun yang kamu masuki.</p>
+  <div id="acctStep1">
+    <label for="acctEmail">Email</label>
+    <input id="acctEmail" type="email" inputmode="email" autocomplete="email" maxlength="120" placeholder="nama@email.com">
+    <div class="row">
+      <button class="btn ghost" type="button" data-close>Batal</button>
+      <button class="btn primary" id="acctSend" type="button">Kirim kode</button>
+    </div>
+  </div>
+  <div id="acctStep2" hidden>
+    <p class="hint" id="acctSent"></p>
+    <label for="acctCode">Kode verifikasi</label>
+    <input id="acctCode" class="code-in" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="000000">
+    <div class="row">
+      <button class="btn primary" id="acctVerify" type="button">Verifikasi</button>
+    </div>
+    <button class="link-btn" id="acctResend" type="button" disabled>Kirim ulang kode</button>
+    <button class="link-btn" id="acctChange" type="button">Ganti email</button>
+  </div>
+  <p class="acct-err" id="acctErr" role="alert"></p>
+  <button class="link-btn" id="acctSwitch" type="button">Sudah punya akun? Masuk</button>
+</dialog>
+
 <!-- Info -->
 <dialog id="dlgInfo" aria-labelledby="tInfo">
   <div class="grab" aria-hidden="true"></div>
@@ -179,6 +234,11 @@
   <p class="hint">Pesan yang melanggar bisa dilaporkan lewat tombol Laporkan. Botol yang dilaporkan langsung disembunyikan.</p>
   <p class="hint" id="iosHint" hidden>Di iPhone: ketuk Bagikan, lalu pilih Tambah ke Layar Utama.</p>
   <p class="hint"><a href="/privacy.html" class="lnk">Kebijakan privasi dan ketentuan</a></p>
+  <div class="acct">
+    <p class="hint" id="acctText"></p>
+    <button class="btn primary" id="btnAcct" type="button">Simpan akunku</button>
+    <button class="link-btn" id="btnAcctLogin" type="button">Sudah punya akun? Masuk</button>
+  </div>
   <div class="row col">
     <button class="btn ghost" id="btnShare" type="button">Ajak teman ke laut</button>
     <button class="btn danger" id="btnWipe" type="button">Hapus semua data saya</button>
@@ -190,5 +250,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
+<script src="js/mine.js"></script>
+<script src="js/account.js"></script>
 </body>
 </html>
