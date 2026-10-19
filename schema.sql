@@ -35,6 +35,8 @@ create table if not exists public.replies (
 -- Fitur chat: pesan bisa diubah (edited_at) dan dihapus (deleted_at, isi dikosongkan).
 alter table public.replies add column if not exists edited_at  timestamptz;
 alter table public.replies add column if not exists deleted_at timestamptz;
+-- Membalas pesan tertentu (kutipan). Bila pesan yang dikutip terhapus dari server, kutipannya hilang.
+alter table public.replies add column if not exists reply_to uuid references public.replies (id) on delete set null;
 
 create table if not exists public.reports (
   id         uuid primary key default gen_random_uuid(),
@@ -52,6 +54,14 @@ create table if not exists public.catch_log (
   bottle_id  uuid not null references public.bottles (id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (user_id, bottle_id)
+);
+
+-- Pesan yang disembunyikan seseorang dari tampilannya sendiri ("hapus untuk saya"). Lawan bicara tetap melihatnya.
+create table if not exists public.reply_hidden (
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  reply_id   uuid not null references public.replies (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, reply_id)
 );
 
 -- Pencatat untuk batas penggunaan (tetap ada walau botol dihapus).
@@ -161,6 +171,11 @@ begin
   new.nickname   := btrim(coalesce(new.nickname, ''));
   new.edited_at  := null;
   new.deleted_at := null;
+  -- Kutipan hanya boleh menunjuk pesan di botol yang sama.
+  if new.reply_to is not null
+     and not exists (select 1 from public.replies where id = new.reply_to and bottle_id = new.bottle_id) then
+    new.reply_to := null;
+  end if;
   if not public.lo_is_clean(new.message) or not public.lo_is_clean(new.nickname) then
     raise exception 'tautan_dilarang';
   end if;
@@ -181,13 +196,14 @@ alter table public.reports      enable row level security;
 alter table public.catch_log    enable row level security;
 alter table public.rate_log     enable row level security;
 alter table public.banned_users enable row level security;
+alter table public.reply_hidden enable row level security;
 
 do $$
 declare r record;
 begin
   for r in select policyname, tablename from pg_policies
            where schemaname = 'public'
-             and tablename in ('bottles','replies','reports','catch_log','rate_log','banned_users')
+             and tablename in ('bottles','replies','reports','catch_log','rate_log','banned_users','reply_hidden')
   loop
     execute format('drop policy %I on public.%I', r.policyname, r.tablename);
   end loop;
@@ -201,21 +217,30 @@ create policy bottles_delete on public.bottles for delete to authenticated
   using (author = auth.uid());
 
 create policy replies_select on public.replies for select to authenticated
-  using (exists (
-    select 1 from public.bottles b
-    where b.id = replies.bottle_id
-      and (b.author = auth.uid() or (b.caught_by = auth.uid() and not b.hidden))
-  ));
+  using (
+    exists (
+      select 1 from public.bottles b
+      where b.id = replies.bottle_id
+        and (b.author = auth.uid() or (b.caught_by = auth.uid() and not b.hidden))
+    )
+    -- pesan yang kamu sembunyikan sendiri tidak ikut terbaca olehmu
+    and not exists (
+      select 1 from public.reply_hidden h where h.reply_id = replies.id and h.user_id = auth.uid()
+    )
+  );
+create policy reply_hidden_select on public.reply_hidden for select to authenticated
+  using (user_id = auth.uid());
 create policy replies_insert on public.replies for insert to authenticated
   with check (author = auth.uid());
 
 -- reports, catch_log, rate_log, banned_users: tanpa policy = tertutup untuk klien.
 
 revoke all on public.bottles, public.replies, public.reports, public.catch_log,
-              public.rate_log, public.banned_users from anon, authenticated;
+              public.rate_log, public.banned_users, public.reply_hidden from anon, authenticated;
 revoke all on sequence public.rate_log_id_seq from anon, authenticated;
 grant select, insert, delete on public.bottles to authenticated;
 grant select, insert         on public.replies to authenticated;
+grant select                 on public.reply_hidden to authenticated;
 
 ------------------------------------------------------------------------------
 -- Fungsi untuk aplikasi
@@ -228,6 +253,7 @@ drop function if exists public.release_bottle(uuid);
 drop function if exists public.report_bottle(uuid, text);
 drop function if exists public.edit_reply(uuid, text);
 drop function if exists public.delete_reply(uuid);
+drop function if exists public.hide_reply(uuid);
 drop function if exists public.delete_my_data();
 
 -- Jumlah botol yang mengapung + suasana beberapa botol (untuk digambar di laut). Tanpa isi pesan.
@@ -327,6 +353,18 @@ begin
   if not found then raise exception 'tidak_boleh'; end if;
 end $$;
 
+-- Sembunyikan pesan mana pun (milikmu atau lawan bicara) dari tampilanmu sendiri. Lawan bicara tetap melihatnya.
+create function public.hide_reply(p_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid();
+begin
+  if me is null then raise exception 'tidak_boleh'; end if;
+  perform 1 from public.replies rp join public.bottles b on b.id = rp.bottle_id
+    where rp.id = p_id and me in (b.author, b.caught_by);
+  if not found then raise exception 'tidak_boleh'; end if;
+  insert into public.reply_hidden (user_id, reply_id) values (me, p_id) on conflict do nothing;
+end $$;
+
 create function public.delete_my_data() returns void
 language plpgsql security definer set search_path = public, auth as $$
 declare me uuid := auth.uid();
@@ -357,8 +395,8 @@ revoke all on function public.sea_view(), public.catch_bottle(text), public.rele
 grant execute on function public.sea_view(), public.catch_bottle(text), public.release_bottle(uuid),
                public.report_bottle(uuid, text), public.delete_my_data() to authenticated;
 
-revoke all on function public.edit_reply(uuid, text), public.delete_reply(uuid) from public, anon;
-grant execute on function public.edit_reply(uuid, text), public.delete_reply(uuid) to authenticated;
+revoke all on function public.edit_reply(uuid, text), public.delete_reply(uuid), public.hide_reply(uuid) from public, anon;
+grant execute on function public.edit_reply(uuid, text), public.delete_reply(uuid), public.hide_reply(uuid) to authenticated;
 
 ------------------------------------------------------------------------------
 -- Laporan: diperiksa AI (Cloudflare Workers AI) dan halaman admin
