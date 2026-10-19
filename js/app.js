@@ -32,7 +32,7 @@
   ];
 
   const ERR = {
-    tautan_dilarang: 'Pesan tidak boleh berisi tautan, akun media sosial, email, atau nomor telepon.',
+    tautan_dilarang: 'Nama panggilan tidak boleh berisi tautan, akun media sosial, email, atau nomor telepon.',
     terlalu_cepat: 'Pelan-pelan dulu. Tunggu beberapa detik lalu coba lagi.',
     limit_botol: 'Kamu sudah melempar 10 botol dalam 24 jam. Coba lagi besok.',
     limit_balasan: 'Terlalu banyak balasan dalam satu jam. Coba lagi nanti.',
