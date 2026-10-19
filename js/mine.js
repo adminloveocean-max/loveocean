@@ -18,15 +18,50 @@
     if (text != null) n.textContent = text;
     return n;
   }
-  function heart() {
+  function icon(id) {
     const s = document.createElementNS(SVGNS, 'svg');
     s.setAttribute('class', 'ic');
     s.setAttribute('viewBox', '0 0 24 24');
     s.setAttribute('aria-hidden', 'true');
     const u = document.createElementNS(SVGNS, 'use');
-    u.setAttribute('href', '#i-heart');
+    u.setAttribute('href', '#' + id);
     s.appendChild(u);
     return s;
+  }
+  // Tombol hapus langsung di daftar. Dua langkah supaya tidak tertekan tidak sengaja.
+  function delBtn(b) {
+    const own = b.author === LO.myId();
+    const label = own ? 'Hapus botol' : 'Lepas botol';
+    const btn = el('button', 'c-del');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    let armed = false, timer;
+    function reset() { armed = false; btn.classList.remove('armed'); btn.textContent = ''; btn.appendChild(icon('i-trash')); }
+    reset();
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      if (!armed) {
+        armed = true;
+        btn.classList.add('armed');
+        btn.textContent = own ? 'Hapus?' : 'Lepas?';
+        timer = setTimeout(reset, 3000);
+        return;
+      }
+      clearTimeout(timer);
+      btn.disabled = true;
+      try {
+        await LO.removeBottle(b);
+        LO.toast(own ? 'Botol dihapus.' : 'Botol dilepas kembali ke laut.');
+      } catch (err) {
+        LO.toast(LO.human(err), 4500);
+        btn.disabled = false;
+        reset();
+        return;
+      }
+      refresh(false);
+    });
+    return btn;
   }
   const pad = (n) => (n < 10 ? '0' : '') + n;
   function stamp(ts) {
@@ -63,7 +98,7 @@
       else if (mine) name = b.caught_by ? (otherNick[b.id] || 'Seseorang') : 'Botol hanyut';
       else name = b.nickname || 'Seseorang di tepi laut';
       let text, ts;
-      if (last) { text = (last.author === me ? 'Kamu: ' : '') + (last.message || ''); ts = last.created_at; }
+      if (last) { text = (last.author === me ? 'Kamu: ' : '') + (last.deleted_at ? 'Pesan dihapus' : (last.message || '')); ts = last.created_at; }
       else { text = (mine ? 'Kamu: ' : '') + (b.message || ''); ts = b.created_at; }
       return { b, name, text: text.replace(/\s+/g, ' '), ts, unread: LO.unreadFor(b.id) };
     }).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts));
@@ -79,13 +114,13 @@
       return;
     }
     list.forEach((e) => {
-      const row = el('button', 'chat-row' + (e.unread ? ' unread' : ''));
-      row.type = 'button';
-      row.setAttribute('role', 'listitem');
+      const row = el('div', 'chat-row' + (e.unread ? ' unread' : ''));
+      const open = el('button', 'c-open');
+      open.type = 'button';
       row.style.setProperty('--mood', LO.moodOf(e.b.mood).color);
       const ava = el('span', 'c-ava');
       ava.setAttribute('aria-hidden', 'true');
-      ava.appendChild(heart());
+      ava.appendChild(icon('i-heart'));
       const main = el('span', 'c-main');
       const top = el('span', 'c-top');
       top.appendChild(el('span', 'c-name', e.name));
@@ -95,9 +130,11 @@
       if (e.unread) bot.appendChild(el('b', 'c-badge', e.unread > 9 ? '9+' : String(e.unread)));
       main.appendChild(top);
       main.appendChild(bot);
-      row.appendChild(ava);
-      row.appendChild(main);
-      row.addEventListener('click', () => LO.openBottle(e.b));
+      open.appendChild(ava);
+      open.appendChild(main);
+      open.addEventListener('click', () => LO.openBottle(e.b));
+      row.appendChild(open);
+      row.appendChild(delBtn(e.b));
       box.appendChild(row);
     });
     box.scrollTop = keep;
@@ -126,7 +163,7 @@
     if (LO.bottles.length) render();
     refresh(true);
     clearInterval(pollTimer);
-    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(false); }, 8000);
+    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(false); }, 15000);
   }
   function hide() {
     if (!isOpen) return;

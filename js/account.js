@@ -16,9 +16,9 @@
   function errText(e) {
     const m = ((e && e.message) || '') + ' ' + ((e && e.code) || '');
     if (/over_email_send_rate_limit|rate limit|only request this after|too many/i.test(m)) return 'Terlalu banyak permintaan. Tunggu beberapa menit lalu coba lagi.';
+    if (/email.*(invalid|valid)|validation/i.test(m)) return 'Alamat email tidak valid.';
     if (/otp_expired|expired|invalid|token/i.test(m)) return 'Kode salah atau sudah kedaluwarsa. Periksa kodenya atau kirim ulang.';
     if (/signup.*disabled|signups not allowed|user not found|otp_disabled/i.test(m)) return 'Email ini belum punya akun. Pilih "Simpan akun ini" untuk mendaftarkannya.';
-    if (/email.*(invalid|valid)|validation/i.test(m)) return 'Alamat email tidak valid.';
     return LO.human(e);
   }
   const exists = (e) => /already|exists|registered|email_exists|not unique|duplicate/i.test(((e && e.message) || '') + ' ' + ((e && e.code) || ''));
@@ -103,7 +103,6 @@
       }
       $('#acctSent').textContent = 'Kode dikirim ke ' + email + '. Periksa kotak masuk dan folder spam.';
       showStep(2);
-      if (!$('#acctErr').textContent && mode === 'login' && LO.session && LO.session.user && LO.session.user.is_anonymous) { /* peringatan tampil di paintMode */ }
       cooldown(60);
       $('#acctCode').value = '';
       setTimeout(() => { try { $('#acctCode').focus(); } catch (e) { /* abaikan */ } }, 60);

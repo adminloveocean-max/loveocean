@@ -43,13 +43,20 @@
   };
 
   /* ---------- util ---------- */
-  let toastTimer;
+  // Toast memakai popover supaya tampil di atas dialog modal (lapisan teratas browser).
+  let toastTimer, toastHide;
   function toast(msg, ms) {
     const t = $('#toast');
     t.textContent = msg;
+    clearTimeout(toastTimer); clearTimeout(toastHide);
+    // Buka ulang setiap kali: dialog yang dibuka setelah toast sebelumnya akan menutupinya, dan ini memindahkannya ke lapisan teratas lagi.
+    try { if (t.showPopover) { if (t.matches(':popover-open')) t.hidePopover(); t.showPopover(); } } catch (e) { /* abaikan */ }
+    void t.offsetWidth;
     t.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), ms || 3400);
+    toastTimer = setTimeout(() => {
+      t.classList.remove('show');
+      toastHide = setTimeout(() => { try { if (t.hidePopover && t.matches(':popover-open')) t.hidePopover(); } catch (e) { /* abaikan */ } }, 300);
+    }, ms || 3400);
   }
   function lsGet(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* abaikan */ } }
@@ -121,7 +128,11 @@
       body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.access_token) throw new Error(data.msg || data.error_description || data.message || 'auth_gagal');
+    if (!res.ok || !data.access_token) {
+      const err = new Error(data.msg || data.error_description || data.message || 'auth_gagal');
+      err.status = res.status;
+      throw err;
+    }
     return data;
   }
   function ensureSession() {
@@ -134,7 +145,10 @@
             session = await authCall('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
             lsSet(K.session, session);
             return session;
-          } catch (e) { if (!navigator.onLine) throw e; }
+          } catch (e) {
+            // Akun baru dibuat hanya bila server jelas menolak token. Gangguan jaringan atau server tidak boleh mengganti akun.
+            if (!navigator.onLine || ![400, 401, 403, 404, 422].includes(e.status)) throw e;
+          }
         }
         session = await authCall('signup', {});
         lsSet(K.session, session);
@@ -164,7 +178,7 @@
     const txt = await res.text();
     let data = null;
     try { data = txt ? JSON.parse(txt) : null; } catch (e) { /* bukan JSON */ }
-    if (res.status === 401 && retry !== false) { session = null; lsDel(K.session); return api(path, opt, false); }
+    if (res.status === 401 && retry !== false) { if (session) session.expires_at = 0; return api(path, opt, false); } // paksa refresh token dulu
     if (!res.ok) {
       const err = new Error((data && (data.message || data.msg)) || res.statusText);
       err.status = res.status;
@@ -285,26 +299,8 @@
   }
 
   /* ---------- lempar satu ---------- */
-  let mood = 'cinta';
-  function buildMoods() {
-    const box = $('#moodPick');
-    if (!box) return; // pilihan suasana dihilangkan dari tampilan; semua botol memakai 'cinta'
-    Object.keys(MOODS).forEach((key) => {
-      const lab = el('label', 'chip');
-      lab.style.setProperty('--mood', MOODS[key].color);
-      const inp = document.createElement('input');
-      inp.type = 'radio'; inp.name = 'mood'; inp.value = key;
-      inp.addEventListener('change', () => { mood = key; saveDraft(); });
-      lab.appendChild(inp);
-      lab.appendChild(el('span', 'chipface', MOODS[key].label));
-      box.appendChild(lab);
-    });
-  }
-  function setMood(key) {
-    mood = MOODS[key] ? key : 'cinta';
-    document.querySelectorAll('#moodPick input').forEach((i) => { i.checked = i.value === mood; });
-  }
-  function saveDraft() { lsSet(K.draft, { mood, text: $('#inMsg').value, name: $('#inName').value }); }
+  const mood = 'cinta'; // pilihan suasana dihilangkan dari tampilan; semua botol memakai 'cinta'
+  function saveDraft() { lsSet(K.draft, { text: $('#inMsg').value, name: $('#inName').value }); }
   function updateCount() {
     const n = $('#inMsg').value.length;
     const c = $('#count');
@@ -312,12 +308,10 @@
     c.classList.toggle('warn', n >= MAX - 30);
   }
   function openThrow() {
-    $('#dlgMine').close();
     if (window.LOMine) window.LOMine.close();
     const d = lsGet(K.draft, {});
     $('#inName').value = d.name != null ? d.name : lsGet(K.name, '');
     $('#inMsg').value = d.text || '';
-    setMood(d.mood);
     updateCount();
     openDlg($('#dlgThrow'));
   }
@@ -386,22 +380,44 @@
     try { await navigator.clipboard.writeText(s); toast('Pesan disalin.', 1800); }
     catch (e) { toast('Pesan tidak bisa disalin di perangkat ini.'); }
   }
-  function ensureEditBar() {
-    let bar = $('#editBar');
+  // Bilah di atas kolom ketik: "Mengubah pesan" atau "Membalas ...".
+  function ensureBar(id, text, onCancel) {
+    let bar = $('#' + id);
     if (bar) return bar;
     bar = el('div', 'editbar');
-    bar.id = 'editBar';
+    bar.id = id;
     bar.hidden = true;
     const x = el('button', 'editbar-x', 'Batal');
     x.type = 'button';
-    x.addEventListener('click', cancelEdit);
-    bar.appendChild(el('span', 'editbar-t', 'Mengubah pesan'));
+    x.addEventListener('click', onCancel);
+    bar.appendChild(el('span', 'editbar-t', text));
     bar.appendChild(x);
     const box = $('#bReplyBox');
     box.insertBefore(bar, box.firstChild);
     return bar;
   }
+  const ensureEditBar = () => ensureBar('editBar', 'Mengubah pesan', cancelEdit);
+  const ensureQuoteBar = () => ensureBar('quoteBar', '', cancelReply);
+
+  let replyTo = null; // pesan yang sedang dibalas (kutipan)
+  const whoOf = (r) => (r.author === myId() ? 'Kamu' : (r.nickname || 'Anonim'));
+  const previewOf = (r) => (r.deleted_at ? 'Pesan dihapus' : String(r.message || '').replace(/\s+/g, ' ').slice(0, 80));
+
+  function startReply(r) {
+    if (editing) cancelEdit();
+    replyTo = r;
+    const bar = ensureQuoteBar();
+    bar.firstChild.textContent = 'Membalas ' + whoOf(r) + ': ' + previewOf(r);
+    bar.hidden = false;
+    $('#inReply').focus();
+  }
+  function cancelReply() {
+    replyTo = null;
+    const bar = $('#quoteBar');
+    if (bar) bar.hidden = true;
+  }
   function startEdit(r) {
+    cancelReply();
     editing = r;
     ensureEditBar().hidden = false;
     const t = $('#inReply');
@@ -420,6 +436,7 @@
     $('#doReply').setAttribute('aria-label', 'Kirim balasan');
     growReply();
   }
+  // Hapus untuk semua: isi pesan dikosongkan di server, kedua pihak melihat "Pesan dihapus".
   async function removeReply(r) {
     try {
       await rpc('delete_reply', { p_id: r.id });
@@ -429,9 +446,21 @@
       loadMine().catch(() => {});
     } catch (e) { toast(diagnose(e), 5000); }
   }
+  // Hapus untuk saya: pesan (termasuk milik lawan bicara atau yang sudah "dihapus") hilang dari tampilanmu saja.
+  async function hideReplyForMe(r) {
+    try {
+      await rpc('hide_reply', { p_id: r.id });
+      if (editing && editing.id === r.id) cancelEdit();
+      if (replyTo && replyTo.id === r.id) cancelReply();
+      toast('Pesan dihapus dari tampilanmu.', 1800);
+      await loadReplies();
+      loadMine().catch(() => {});
+    } catch (e) { toast(diagnose(e), 5000); }
+  }
   function showMsgMenu(row, r, mine) {
     if (msgMenu && msgMenu.previousElementSibling === row) { closeMsgMenu(); return; }
     closeMsgMenu();
+    const gone = !!r.deleted_at;
     const m = el('div', 'msgmenu ' + (mine ? 'me' : 'them'));
     m.setAttribute('role', 'menu');
     m.addEventListener('click', (e) => e.stopPropagation());
@@ -442,18 +471,39 @@
       b.addEventListener('click', () => fn(b));
       m.appendChild(b);
     };
-    add('Salin', '', () => { closeMsgMenu(); copyText(r.message); });
-    if (mine) {
-      add('Ubah', '', () => { closeMsgMenu(); startEdit(r); });
-      let armed = false;
-      add('Hapus', 'danger', (b) => {
-        if (!armed) { armed = true; b.textContent = 'Yakin hapus?'; return; }
-        closeMsgMenu();
-        removeReply(r);
-      });
+    // tombol dua langkah supaya tidak terhapus tidak sengaja
+    const twoStep = (label, fn) => add(label, 'danger', (b) => {
+      if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Yakin?'; return; }
+      closeMsgMenu();
+      fn();
+    });
+    if (!gone) {
+      if (!$('#bReplyBox').hidden) add('Balas', '', () => { closeMsgMenu(); startReply(r); });
+      add('Salin', '', () => { closeMsgMenu(); copyText(r.message); });
+      if (mine) {
+        add('Ubah', '', () => { closeMsgMenu(); startEdit(r); });
+        twoStep('Hapus untuk semua', () => removeReply(r));
+      }
     }
+    twoStep(gone ? 'Hapus dari tampilan' : 'Hapus untuk saya', () => hideReplyForMe(r));
     row.after(m);
     msgMenu = m;
+  }
+  // Kutipan di dalam gelembung. Ketuk untuk melompat ke pesan aslinya.
+  function quoteBlock(q) {
+    const box = el('div', 'quote');
+    if (!q) { box.classList.add('gone'); box.appendChild(el('span', 'q-t', 'Pesan tidak tersedia')); return box; }
+    box.appendChild(el('span', 'q-who', whoOf(q)));
+    box.appendChild(el('span', 'q-t', previewOf(q)));
+    box.addEventListener('click', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      const target = document.querySelector('#bThread [data-id="' + q.id + '"]');
+      if (!target) return;
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      target.classList.add('flash');
+      setTimeout(() => target.classList.remove('flash'), 1400);
+    });
+    return box;
   }
   function renderThread(replies) {
     const sig = replies.map((r) => r.id + ':' + (r.edited_at || '') + ':' + (r.deleted_at || '')).join('|');
@@ -463,6 +513,8 @@
     const keep = nearBottom();
     const t = $('#bThread');
     t.textContent = '';
+    const byId = {};
+    replies.forEach((r) => { byId[r.id] = r; });
     let day = '';
     replies.forEach((r) => {
       const k = dayKey(r.created_at);
@@ -470,17 +522,17 @@
       const mine = r.author === myId();
       const gone = !!r.deleted_at;
       const row = el('div', 'bubble ' + (mine ? 'me' : 'them') + (gone ? ' gone' : ''));
+      row.dataset.id = r.id;
+      if (r.reply_to && !gone) row.appendChild(quoteBlock(byId[r.reply_to]));
       row.appendChild(el('p', 'bt', gone ? (mine ? 'Kamu menghapus pesan ini' : 'Pesan ini telah dihapus') : r.message));
       row.appendChild(el('span', 'bm', (mine ? 'Kamu' : (r.nickname || 'Anonim')) + ', ' + clock(r.created_at) + (r.edited_at && !gone ? ' · diedit' : '')));
-      if (!gone) {
-        row.tabIndex = 0;
-        row.setAttribute('role', 'button');
-        row.setAttribute('aria-haspopup', 'menu');
-        const open = (ev) => { ev.preventDefault(); ev.stopPropagation(); showMsgMenu(row, r, mine); };
-        row.addEventListener('click', open);
-        row.addEventListener('contextmenu', open);
-        row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') open(ev); });
-      }
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.setAttribute('aria-haspopup', 'menu');
+      const open = (ev) => { ev.preventDefault(); ev.stopPropagation(); showMsgMenu(row, r, mine); };
+      row.addEventListener('click', open);
+      row.addEventListener('contextmenu', open);
+      row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') open(ev); });
       t.appendChild(row);
     });
     if (keep) toBottom();
@@ -513,6 +565,7 @@
     threadSig = '';
     closeMsgMenu();
     cancelEdit();
+    cancelReply();
     $('#bMenuBox').hidden = true;
     const iAmAuthor = b.author === myId();
     const m = moodOf(b.mood);
@@ -557,7 +610,10 @@
           await rpc('edit_reply', { p_id: editing.id, p_message: text });
           cancelEdit();
         } else {
-          await api('/rest/v1/replies', { method: 'POST', body: { bottle_id: cur.id, nickname: lsGet(K.name, ''), message: text } });
+          const body = { bottle_id: cur.id, nickname: lsGet(K.name, ''), message: text };
+          if (replyTo) body.reply_to = replyTo.id; // dikirim hanya saat membalas pesan tertentu
+          await api('/rest/v1/replies', { method: 'POST', body });
+          cancelReply();
           $('#inReply').value = '';
           growReply();
           $('#countR').textContent = '0 / ' + MAX;
@@ -568,7 +624,7 @@
       finally { btn.disabled = false; }
     });
   }
-  function closeBottle() { clearInterval(pollTimer); pollTimer = null; cur = null; closeMsgMenu(); cancelEdit(); }
+  function closeBottle() { clearInterval(pollTimer); pollTimer = null; cur = null; closeMsgMenu(); cancelEdit(); cancelReply(); }
 
   /* tombol dua langkah supaya tidak tertekan tidak sengaja */
   function confirmBtn(btn, label, action) {
@@ -584,6 +640,12 @@
     });
   }
   function afterChange() { loadMine().catch(() => {}); refreshSea(); }
+  // Dipakai daftar Botolku: botolmu sendiri dihapus; botol temuan dilepas kembali ke laut (percakapan ikut hilang).
+  async function removeBottle(b) {
+    if (b.author === myId()) await api('/rest/v1/bottles?id=eq.' + encodeURIComponent(b.id), { method: 'DELETE' });
+    else await rpc('release_bottle', { p_id: b.id });
+    afterChange();
+  }
   // Minta AI (fungsi Cloudflare /api/review) memeriksa laporan. Gagal diam-diam: laporan tetap masuk antrean admin.
   async function requestReview(bottleId) {
     try {
@@ -641,39 +703,6 @@
         if (srcEl) srcEl.classList.remove('catching');
         toast(human(e), 5000);
       } finally { setDock(!CONFIGURED); }
-    });
-  }
-
-  /* ---------- botolku ---------- */
-  async function openMine() {
-    openDlg($('#dlgMine'));
-    const list = $('#mineList');
-    list.textContent = '';
-    list.appendChild(el('p', 'empty', 'Memuat botolmu...'));
-    try { await loadMine(); } catch (e) { list.textContent = ''; list.appendChild(el('p', 'empty', human(e))); return; }
-    list.textContent = '';
-    if (!myBottles.length) {
-      list.appendChild(el('p', 'empty', 'Belum ada botol. Tekan "Lempar satu" untuk menulis pesan pertamamu, atau "Ambil" untuk menemukan botol orang lain.'));
-      return;
-    }
-    myBottles.forEach((b) => {
-      const iAmAuthor = b.author === myId();
-      const it = el('button', 'item');
-      it.type = 'button';
-      it.style.setProperty('--mood', moodOf(b.mood).color);
-      const un = unreadFor(b.id);
-      const tag = el('div', 'tag');
-      tag.appendChild(moodDot(b.mood));
-      tag.appendChild(document.createTextNode(
-        b.hidden ? 'Sedang ditinjau'
-          : iAmAuthor ? (b.caught_by ? 'Kamu lempar, sudah ditemukan' : 'Kamu lempar, masih hanyut')
-            : 'Kamu temukan'));
-      if (un) tag.appendChild(el('b', 'new', un + ' balasan baru'));
-      it.appendChild(tag);
-      it.appendChild(el('p', 'prev', b.message.length > 110 ? b.message.slice(0, 110) + '...' : b.message));
-      it.appendChild(el('span', 'when', ago(b.created_at)));
-      it.addEventListener('click', () => { $('#dlgMine').close(); openBottle(b); });
-      list.appendChild(it);
     });
   }
 
@@ -769,11 +798,10 @@
   /* ---------- event ---------- */
   $('#btnTake').addEventListener('click', () => take(null));
   $('#btnThrow').addEventListener('click', openThrow);
-  $('#btnMine').addEventListener('click', () => { if (window.LOMine) window.LOMine.open(); else openMine(); });
+  $('#btnMine').addEventListener('click', () => { if (window.LOMine) window.LOMine.open(); });
   $('#btnInfo').addEventListener('click', () => openDlg($('#dlgInfo')));
   $('#doThrow').addEventListener('click', doThrow);
   $('#doReply').addEventListener('click', doReply);
-  $('#mineThrow').addEventListener('click', openThrow);
   $('#inMsg').addEventListener('input', () => { updateCount(); saveDraft(); });
   $('#inName').addEventListener('input', saveDraft);
   $('#inReply').addEventListener('input', () => { $('#countR').textContent = $('#inReply').value.length + ' / ' + MAX; growReply(); });
@@ -785,14 +813,18 @@
     if ((desktop && !e.shiftKey) || e.ctrlKey || e.metaKey) { e.preventDefault(); doReply(); }
   });
   document.querySelectorAll('dialog').forEach((d) => {
-    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    d.addEventListener('click', (e) => {
+      // Tutup hanya bila yang diketuk benar-benar backdrop (di luar kotak dialog), bukan ruang padding di dalamnya.
+      if (e.target !== d) return;
+      const r = d.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) d.close();
+    });
     d.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => d.close()));
   });
-  $('#dlgBottle').addEventListener('close', closeBottle);
+  $('#dlgBottle').addEventListener('close', () => { closeBottle(); $('#bMenuBox').hidden = true; });
   // menu titik tiga di header chat
   $('#bMenu').addEventListener('click', (e) => { e.stopPropagation(); const m = $('#bMenuBox'); m.hidden = !m.hidden; });
   document.addEventListener('click', (e) => { const m = $('#bMenuBox'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; closeMsgMenu(); });
-  $('#dlgBottle').addEventListener('close', () => { $('#bMenuBox').hidden = true; });
   $('#welcomeGo').addEventListener('click', () => $('#dlgWelcome').close());
   $('#dlgWelcome').addEventListener('close', () => lsSet(K.welcome, true));
   document.addEventListener('visibilitychange', () => {
@@ -818,7 +850,7 @@
   window.LO = {
     get bottles() { return myBottles; },
     get replies() { return myReplyMeta; },
-    unreadFor, myId, moodOf, ago, loadMine, openBottle, human, openThrow, toast, openDlg, authReq,
+    unreadFor, myId, moodOf, ago, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
     get session() { return session; },
     setSession(s) { session = s; lsSet(K.session, s); },
     // dipanggil setelah masuk/menyimpan akun: muat ulang data milik akun ini
@@ -833,8 +865,6 @@
   };
 
   buildWaves();
-  buildMoods();
-  setMood('cinta');
   updateCount();
   start();
   if (!lsGet(K.welcome, false)) openDlg($('#dlgWelcome'));
