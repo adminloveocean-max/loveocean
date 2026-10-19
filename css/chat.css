@@ -30,6 +30,7 @@
 .msgmenu {
   display: flex;
   align-self: stretch;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 4px 0 8px;
 }
@@ -68,6 +69,13 @@
   background: rgba(255, 255, 255, .07);
 }
 .editbar[hidden] { display: none; }
+.editbar-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .editbar-x {
   appearance: none;
   border: 0;
@@ -78,4 +86,31 @@
   text-decoration: underline;
   padding: 6px 4px;
   cursor: pointer;
+}
+
+/* Kutipan balasan di dalam gelembung */
+.quote {
+  display: block;
+  margin: 0 0 6px;
+  padding: 5px 9px;
+  border-left: 3px solid #ff5f84;
+  border-radius: 8px;
+  background: rgba(28, 27, 58, .07);
+  cursor: pointer;
+}
+.bubble.me .quote { background: rgba(58, 15, 34, .12); border-left-color: rgba(58, 15, 34, .55); }
+.quote .q-who { display: block; font-size: 11.5px; font-weight: 700; opacity: .8; }
+.quote .q-t {
+  display: block;
+  font-size: 13px;
+  opacity: .85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quote.gone { cursor: default; font-style: italic; }
+.bubble.flash { animation: bubbleFlash 1.2s ease; }
+@keyframes bubbleFlash {
+  0%, 60% { box-shadow: 0 0 0 3px rgba(255, 95, 132, .6); }
+  100% { box-shadow: 0 0 0 3px rgba(255, 95, 132, 0); }
 }

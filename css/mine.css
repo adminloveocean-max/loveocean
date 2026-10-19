@@ -11,7 +11,12 @@
 .mine-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 0 calc(96px + env(safe-area-inset-bottom,0px))}
 .chat-row{display:flex;align-items:center;gap:14px;width:100%;min-height:76px;padding:10px 16px;border:0;background:none;text-align:left;color:inherit;font:inherit}
 .chat-row:active{background:rgba(28,27,58,.06)}
-.chat-row:focus-visible{outline:3px solid #ff5f84;outline-offset:-3px}
+.c-open:focus-visible,.c-del:focus-visible{outline:3px solid #ff5f84;outline-offset:-3px}
+.c-open{flex:1;min-width:0;align-self:stretch;display:flex;align-items:center;gap:14px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left}
+.c-del{flex:none;min-width:44px;height:44px;padding:0 10px;border:0;border-radius:22px;background:none;color:#8b8b97;display:grid;place-items:center;font-size:13px;font-weight:700}
+.c-del .ic{width:22px;height:22px}
+.c-del.armed{color:#fff;background:#c23a63}
+.c-del:disabled{opacity:.5}
 .c-ava{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;color:#fff;
   background:radial-gradient(circle at 35% 30%,#fff6,transparent 55%),var(--mood,#ff5f84);box-shadow:0 2px 8px rgba(28,27,58,.18)}
 .c-ava .ic{width:26px;height:26px}
@@ -53,4 +58,5 @@
   .chat-row:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(28,27,58,.12)}
   .mine-back:hover{background:rgba(28,27,58,.08)}
   .mine-fab:hover{filter:brightness(1.05);transform:translateY(-2px)}
+  .c-del:not(.armed):hover{color:#c23a63;background:rgba(194,58,99,.08)}
 }
