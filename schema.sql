@@ -98,7 +98,8 @@ alter table public.replies drop constraint if exists replies_nick_len;
 alter table public.replies add  constraint replies_nick_len    check (char_length(nickname) <= 30) not valid;
 
 ------------------------------------------------------------------------------
--- Penyaring isi: tautan, email, akun media sosial, nomor telepon
+-- Penyaring nama panggilan: tautan, email, akun media sosial, nomor telepon.
+-- Isi pesan dan balasan BOLEH memuat nomor, akun sosial, dan tautan (tidak disaring).
 ------------------------------------------------------------------------------
 create or replace function public.lo_is_clean(t text) returns boolean
 language sql immutable as $$
@@ -142,8 +143,8 @@ begin
   new.caught_by := null;
   new.caught_at := null;
   new.hidden    := false;
-  if not public.lo_is_clean(new.message) or not public.lo_is_clean(new.nickname) then
-    raise exception 'tautan_dilarang';
+  if not public.lo_is_clean(new.nickname) then
+    raise exception 'tautan_dilarang';   -- hanya untuk nama panggilan
   end if;
   perform public.lo_rate('throw', 10, interval '24 hours', interval '5 seconds', 'limit_botol');
   return new;
@@ -176,8 +177,8 @@ begin
      and not exists (select 1 from public.replies where id = new.reply_to and bottle_id = new.bottle_id) then
     new.reply_to := null;
   end if;
-  if not public.lo_is_clean(new.message) or not public.lo_is_clean(new.nickname) then
-    raise exception 'tautan_dilarang';
+  if not public.lo_is_clean(new.nickname) then
+    raise exception 'tautan_dilarang';   -- hanya untuk nama panggilan
   end if;
   perform public.lo_rate('reply', 30, interval '1 hour', interval '2 seconds', 'limit_balasan');
   return new;
@@ -337,7 +338,6 @@ begin
     for update of rp;
   if not found then raise exception 'tidak_boleh'; end if;
   if char_length(msg) not between 1 and 280 then raise exception 'pesan_kosong'; end if;
-  if not public.lo_is_clean(msg) then raise exception 'tautan_dilarang'; end if;
   perform public.lo_rate('edit', 30, interval '1 hour', interval '1 second', 'limit_balasan');
   update public.replies set message = msg, edited_at = now() where id = p_id;
 end $$;
