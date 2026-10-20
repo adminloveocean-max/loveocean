@@ -284,13 +284,14 @@
     return myReplyMeta.filter((r) => r.bottle_id === bid && !r.deleted_at && r.author !== myId() && Date.parse(r.created_at) > last).length;
   }
   function markSeen(bid) { seen[bid] = Date.now(); lsSet(K.seen, seen); updateBadge(); }
+  const BASE_TITLE = document.title; // judul asli dari index.html (dipakai SEO), hanya diberi awalan jumlah balasan
   function updateBadge() {
     let total = 0;
     myBottles.forEach((b) => { total += unreadFor(b.id); });
     const bd = $('#badge');
     bd.textContent = total > 9 ? '9+' : total;
     bd.hidden = total === 0;
-    document.title = total ? '(' + total + ') Love Ocean' : 'Love Ocean';
+    document.title = total ? '(' + total + ') ' + BASE_TITLE : BASE_TITLE;
   }
   async function loadMine() {
     myBottles = await api('/rest/v1/bottles?select=*&order=created_at.desc&limit=100');
