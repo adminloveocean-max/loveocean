@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v7';
+const CACHE = 'love-ocean-v8';
 
 // Harus sama dengan yang dimuat index.html dan css/theme-night.css (folder night/ ada di akar, sejajar dengan css/).
 const NIGHT = [
@@ -12,7 +12,7 @@ const ASSETS = [
   '/', '/index.html',
   '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-night.css',
   '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js',
-  '/privacy.html', '/css/privacy.css', '/manifest.json',
+  '/privacy.html', '/tentang.html', '/css/privacy.css', '/manifest.json',
   '/icons/logoloveocean.png', '/icons/icon-512.png',
   ...NIGHT
 ];
@@ -52,9 +52,10 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname === '/admin' || url.pathname === '/admin.html') return;
 
   // Halaman: internet dulu, kalau offline pakai salinan tersimpan.
-  // Cloudflare Pages mengalihkan /privacy.html ke /privacy, jadi keduanya harus dikenali agar tidak menimpa halaman utama.
+  // Cloudflare Pages mengalihkan /x.html ke /x, jadi keduanya harus dikenali agar tidak menimpa halaman utama.
   if (req.mode === 'navigate') {
-    const key = (url.pathname === '/privacy' || url.pathname === '/privacy.html') ? '/privacy.html' : '/index.html';
+    const PAGES = { '/privacy': '/privacy.html', '/privacy.html': '/privacy.html', '/tentang': '/tentang.html', '/tentang.html': '/tentang.html' };
+    const key = PAGES[url.pathname] || '/index.html';
     e.respondWith(
       fetch(req).then((res) => store(key, res)).catch(() => caches.match(key))
     );
