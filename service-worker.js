@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v8';
+const CACHE = 'love-ocean-v9';
 
 // Harus sama dengan yang dimuat index.html dan css/theme-night.css (folder night/ ada di akar, sejajar dengan css/).
 const NIGHT = [
@@ -13,7 +13,7 @@ const ASSETS = [
   '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-night.css',
   '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js',
   '/privacy.html', '/tentang.html', '/css/privacy.css', '/manifest.json',
-  '/icons/logoloveocean.png', '/icons/icon-512.png',
+  '/icons/logoloveocean.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png',
   ...NIGHT
 ];
 

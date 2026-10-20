@@ -18,3 +18,7 @@
 
 /admin.html
   X-Robots-Tag: noindex, nofollow
+
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: no-cache
