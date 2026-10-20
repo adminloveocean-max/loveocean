@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "id.web.loveocean.app",
+      "sha256_cert_fingerprints": [
+        "42:A7:8B:48:25:38:EE:30:56:0A:A7:8B:58:D8:50:80:F4:44:94:57:3F:90:45:94:EB:E6:1F:4D:03:F8:64:D1"
+      ]
+    }
+  }
+]
