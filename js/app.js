@@ -671,6 +671,7 @@
           const body = { bottle_id: cur.id, nickname: lsGet(K.name, ''), message: text };
           if (replyTo) body.reply_to = replyTo.id; // dikirim hanya saat membalas pesan tertentu
           await api('/rest/v1/replies', { method: 'POST', body });
+          requestPush(cur.id);
           cancelReply();
           $('#inReply').value = '';
           growReply();
@@ -709,6 +710,18 @@
     try {
       const s = await ensureSession();
       await fetch('/api/review', {
+        method: 'POST',
+        keepalive: true,
+        headers: { Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bottle_id: bottleId })
+      });
+    } catch (e) { /* abaikan */ }
+  }
+  // Minta fungsi Cloudflare /api/push memberi tahu lawan bicara lewat notifikasi. Gagal diam-diam: penanda di dalam aplikasi tetap bekerja.
+  async function requestPush(bottleId) {
+    try {
+      const s = await ensureSession();
+      await fetch('/api/push', {
         method: 'POST',
         keepalive: true,
         headers: { Authorization: 'Bearer ' + s.access_token, 'Content-Type': 'application/json' },
@@ -944,7 +957,7 @@
   window.LO = {
     get bottles() { return myBottles; },
     get replies() { return myReplyMeta; },
-    unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
+    rpc, unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
     get session() { return session; },
     setSession(s) { session = s; lsSet(K.session, s); },
     // dipanggil setelah masuk/menyimpan akun: muat ulang data milik akun ini
