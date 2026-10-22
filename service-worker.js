@@ -1,10 +1,10 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v15';
+const CACHE = 'love-ocean-v16';
 
 const ASSETS = [
   '/', '/index.html',
   '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-day.css',
-  '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js',
+  '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js', '/js/push.js',
   '/privacy.html', '/tentang.html', '/css/privacy.css', '/manifest.json',
   '/day/beach.webp',
   '/day/beach2.webp',
@@ -73,4 +73,36 @@ self.addEventListener('fetch', (e) => {
       return hit || net;
     })
   );
+});
+
+/* ---------- notifikasi balasan (Web Push) ----------
+   Pesan push sengaja kosong: isi balasan tidak pernah lewat layanan push. Teksnya ditetapkan di sini. */
+self.addEventListener('push', (e) => {
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // Aplikasi sedang terbuka dan terlihat: penanda balasan di dalam aplikasi sudah cukup.
+    if (wins.some((c) => c.visibilityState === 'visible' && c.focused)) return;
+    await self.registration.showNotification('Love Ocean', {
+      body: 'Ada balasan baru di botolmu \uD83C\uDF0A',
+      icon: '/icons/icon-192.png',
+      tag: 'balasan',
+      renotify: true,
+      data: { url: '/?botolku=1' }
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of wins) {
+      if (new URL(c.url).origin === self.location.origin) {
+        await c.focus();
+        c.postMessage({ type: 'open-mine' });
+        return;
+      }
+    }
+    await self.clients.openWindow('/?botolku=1');
+  })());
 });
