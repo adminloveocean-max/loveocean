@@ -1,20 +1,14 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v9';
-
-// Harus sama dengan yang dimuat index.html dan css/theme-night.css (folder night/ ada di akar, sejajar dengan css/).
-const NIGHT = [
-  'sky.webp', 'island.png', 'ship.png', 'stars-a.webp', 'stars-b.webp', 'clouds-far.webp', 'clouds-near.webp',
-  'sea-a.webp', 'sea-b.webp', 'sand.webp', 'swash.webp', 'starfish.png', 'shell1.png', 'shell2.png',
-  'palm-left.png', 'palm-right.png', 'bottle-a.png', 'bottle-b.png'
-].map((f) => '/night/' + f);
+const CACHE = 'love-ocean-v15';
 
 const ASSETS = [
   '/', '/index.html',
-  '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-night.css',
+  '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-day.css',
   '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js',
   '/privacy.html', '/tentang.html', '/css/privacy.css', '/manifest.json',
-  '/icons/logoloveocean.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png',
-  ...NIGHT
+  '/day/beach.webp',
+  '/day/beach2.webp',
+  '/icons/logoloveocean.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -47,6 +41,8 @@ self.addEventListener('fetch', (e) => {
 
   // Perantara API (/sb/) dan fungsi AI (/api/) jangan pernah disimpan: isinya percakapan dan butuh data terbaru.
   if (url.pathname.startsWith('/sb/') || url.pathname.startsWith('/api/')) return;
+  // Berkas pemeriksaan Android dan 404 selalu dari server.
+  if (url.pathname.startsWith('/.well-known/') || url.pathname === '/404.html') return;
 
   // Halaman admin tidak boleh disimpan (Cloudflare Pages mengalihkan /admin.html ke /admin).
   if (url.pathname === '/admin' || url.pathname === '/admin.html') return;

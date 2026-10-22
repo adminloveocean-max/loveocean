@@ -6,44 +6,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Love Ocean: tulis satu pesan hangat, masukkan ke botol, dan lepas ke laut. Seseorang akan menemukannya dan membalas. Anonim, tanpa daftar.">
 <link rel="canonical" href="https://loveocean.web.id/">
-<meta name="theme-color" content="#151142">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#9fd9d4">
+<meta name="color-scheme" content="light">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Love Ocean">
 <meta property="og:locale" content="id_ID">
 <meta property="og:url" content="https://loveocean.web.id/">
 <meta property="og:image" content="https://loveocean.web.id/icons/icon-512.png">
+<meta property="og:image:alt" content="Logo Love Ocean: botol pesan di laut">
 <meta name="twitter:card" content="summary">
 <meta property="og:title" content="Love Ocean – Kirim Pesan Anonim dalam Botol ke Laut">
 <meta property="og:description" content="Tulis satu pesan hangat. Lepas ke laut. Seseorang akan menemukannya.">
+<meta name="twitter:title" content="Love Ocean – Kirim Pesan Anonim dalam Botol ke Laut">
+<meta name="twitter:description" content="Tulis satu pesan hangat. Lepas ke laut. Seseorang akan menemukannya.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/logoloveocean.png">
 <link rel="apple-touch-icon" href="/icons/logoloveocean.png">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/mine.css">
-<link rel="stylesheet" href="css/account.css">
-<link rel="stylesheet" href="css/chat.css">
-<link rel="stylesheet" href="css/theme-night.css">
+<link rel="preload" as="image" href="/day/beach.webp" type="image/webp">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/mine.css">
+<link rel="stylesheet" href="/css/account.css">
+<link rel="stylesheet" href="/css/chat.css">
+<link rel="stylesheet" href="/css/theme-day.css">
 </head>
 <body>
 
 <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#e6fbff" stop-opacity=".55"/>
-      <stop offset="1" stop-color="#a9dbe8" stop-opacity=".22"/>
+    <linearGradient id="wv-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".38"/>
+      <stop offset=".45" stop-color="#d9fbf6" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#bff3ec" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bt-glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ebfcfc" stop-opacity=".62"/>
+      <stop offset=".45" stop-color="#aae1e6" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#78c8d2" stop-opacity=".34"/>
+    </linearGradient>
+    <linearGradient id="bt-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".38"/>
+      <stop offset=".3" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".72" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="bt-paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset=".6" stop-color="#f6e8c8"/>
+      <stop offset="1" stop-color="#e7d3a6"/>
+    </linearGradient>
+    <linearGradient id="bt-cork" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dcab70"/>
+      <stop offset="1" stop-color="#a97a42"/>
     </linearGradient>
   </defs>
-  <symbol id="bottle" viewBox="0 0 48 80">
-    <rect x="18.5" y="1.5" width="11" height="10" rx="2.4" fill="#c98f5a"/>
-    <rect x="20" y="3" width="3" height="7" rx="1.2" fill="#e3b384" opacity=".8"/>
-    <path d="M17 11h14v8c0 3.4 11 5.6 11 14.5V66a8 8 0 0 1-8 8H14a8 8 0 0 1-8-8V33.500C6 24.600 17 22.400 17 19z" fill="url(#glass)" stroke="#f3fdff" stroke-opacity=".9" stroke-width="1.6" stroke-linejoin="round"/>
-    <rect x="14" y="38" width="20" height="26" rx="2" fill="#fff4e0"/>
-    <path d="M24 58.500c-8.500-5.600-6.500-12.600 0-9.600 6.500-3 8.500 4 0 9.600z" fill="currentColor"/>
-    <path d="M10.500 36v24" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+  <!-- botol kaca bertutup gabus dengan gulungan surat; dibaringkan, ujung gabus di kanan -->
+  <symbol id="bottle" viewBox="0 0 150 56">
+    <path d="M16 12C8 12 6 17 6 22V34C6 39 8 44 16 44H88C101 44 106 35 117 31.5H127V24.5H117C106 21 101 12 88 12Z" fill="url(#bt-glass)"/>
+    <path d="M26 19.5C22.500 19.500 21.500 23 21.500 28S22.500 36.500 26 36.500H78C81.500 36.500 82.500 33 82.500 28S81.500 19.500 78 19.500Z" fill="url(#bt-paper)"/>
+    <ellipse cx="80" cy="28" rx="3.400" ry="8.500" fill="#ecd8ad" stroke="#cdb584" stroke-width=".6"/>
+    <path d="M80 22.500C77.500 24.500 77.500 31.500 80 33.500" fill="none" stroke="#b79b6a" stroke-width=".7"/>
+    <path d="M30 24h34M30 28h40M30 32h28" stroke="#9b8260" stroke-opacity=".45" stroke-width="1" stroke-linecap="round"/>
+    <rect x="50" y="18.800" width="4.200" height="18.400" rx="1" fill="currentColor"/>
+    <path d="M52 19C47 13 44 18 50 19.500ZM52 19C57 13 60 18 54 19.500Z" fill="currentColor"/>
+    <rect x="124" y="21.500" width="6" height="13" rx="2" fill="url(#bt-glass)" stroke="#fff" stroke-opacity=".8" stroke-width="1"/>
+    <rect x="127" y="23" width="14" height="10" rx="2.600" fill="url(#bt-cork)"/>
+    <circle cx="131" cy="26" r=".8" fill="#8a5f30" fill-opacity=".6"/><circle cx="135" cy="30" r=".9" fill="#8a5f30" fill-opacity=".6"/><circle cx="138" cy="26.500" r=".7" fill="#8a5f30" fill-opacity=".6"/>
+    <path d="M16 12C8 12 6 17 6 22V34C6 39 8 44 16 44H88C101 44 106 35 117 31.5H127V24.5H117C106 21 101 12 88 12Z" fill="url(#bt-sheen)" stroke="#fff" stroke-opacity=".9" stroke-width="1.200"/>
+    <path d="M17 13.800C9 13.800 7.800 18 7.800 22.500V33.500C7.800 38 9 42.200 17 42.200" fill="none" stroke="#5db7c0" stroke-opacity=".35" stroke-width="1.400"/>
+    <path d="M18 15.500H84" stroke="#fff" stroke-opacity=".82" stroke-width="2.400" stroke-linecap="round"/>
+    <path d="M92 15.500C100 16 104 22 112 25.500" stroke="#fff" stroke-opacity=".55" stroke-width="1.600" fill="none" stroke-linecap="round"/>
+    <path d="M20 41H66" stroke="#fff" stroke-opacity=".28" stroke-width="1.600" stroke-linecap="round"/>
+    <ellipse cx="11" cy="24" rx="1.600" ry="5" fill="#fff" fill-opacity=".55"/>
   </symbol>
   <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19.500c-8-5.200-6.200-11.800 0-8.800 6.200-3 8 3.600 0 8.800z" fill="currentColor"/></symbol>
   <symbol id="i-shell" viewBox="0 0 24 24"><path d="M12 3c-4.500 0-8 3.600-8 8.200 0 3.500 2 6.300 4.500 7.600L12 21l3.500-2.200C18 17.500 20 14.700 20 11.200 20 6.600 16.500 3 12 3z M12 3v18 M12 3C9.500 6 8.300 8.500 8.500 18.800 M12 3c2.500 3 3.700 5.500 3.500 15.800" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linejoin="round" stroke-linecap="round"/></symbol>
@@ -55,22 +91,22 @@
 </svg>
 
 <div class="app">
-  <main class="scene" aria-label="Laut saat senja dengan botol pesan yang mengapung">
-    <div class="sky" aria-hidden="true">
-      <div class="stars s1"></div>
-      <div class="stars s2"></div>
-      <div class="shooting"></div>
-      <div class="cloud c1"></div>
-      <div class="cloud c2"></div>
-      <div class="halo"></div>
-      <div class="sun"></div>
-      <svg class="boat" viewBox="0 0 60 44" aria-hidden="true"><path d="M30 2v28H12z M33 8v22h15z" fill="#24124a"/><path d="M4 32h52l-7 9H12z" fill="#24124a"/></svg>
-    </div>
-    <div class="sea" id="sea">
-      <div class="shimmer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="waves back" id="wavesBack" aria-hidden="true"></div>
-      <div class="bottles" id="bottles"></div>
-      <div class="waves front" id="wavesFront" aria-hidden="true"></div>
+  <main class="scene" aria-label="Pantai dan laut siang hari dengan botol pesan yang mengapung">
+    <div class="stage">
+      <div class="swell2" aria-hidden="true"></div>
+      <div class="waves back" aria-hidden="true">
+        <div class="wv wv1"><svg viewBox="0 0 1200 60" preserveAspectRatio="none"><path class="wf" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30V60H0Z"/><path class="wc" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30"/></svg></div>
+        <div class="wv wv2"><svg viewBox="0 0 1200 60" preserveAspectRatio="none"><path class="wf" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30V60H0Z"/><path class="wc" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30"/></svg></div>
+        <div class="wv wv3"><svg viewBox="0 0 1200 60" preserveAspectRatio="none"><path class="wf" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30V60H0Z"/><path class="wc" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30"/></svg></div>
+        <div class="wv wv4"><svg viewBox="0 0 1200 60" preserveAspectRatio="none"><path class="wf" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30V60H0Z"/><path class="wc" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30"/></svg></div>
+      </div>
+      <div class="glints" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="sea" id="sea">
+        <div class="bottles" id="bottles"></div>
+      </div>
+      <div class="waves front" aria-hidden="true">
+        <div class="wv wv5"><svg viewBox="0 0 1200 60" preserveAspectRatio="none"><path class="wf" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30V60H0Z"/><path class="wc" d="M0 30Q75 6 150 30T300 30T450 30T600 30T750 30T900 30T1050 30T1200 30"/></svg></div>
+      </div>
     </div>
   </main>
 
@@ -92,6 +128,8 @@
 
   <p class="pill" id="seaInfo" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="seaText">Menghubungkan ke laut...</span></p>
 
+  <p class="legal"><a href="/tentang">Tentang</a><span aria-hidden="true"> · </span><a href="/privacy">Privasi dan ketentuan</a></p>
+
   <nav class="dock" aria-label="Menu utama">
     <button class="dock-btn" id="btnTake" type="button">
       <svg class="ic" aria-hidden="true"><use href="#i-shell"/></svg>
@@ -111,6 +149,10 @@
   </nav>
 </div>
 
+<noscript>
+  <div class="noscript">Love Ocean memerlukan JavaScript. Aktifkan JavaScript di browsermu untuk menulis dan menemukan botol pesan. Baca juga <a href="/tentang">tentang Love Ocean</a>.</div>
+</noscript>
+
 <!-- Botolku: halaman layar penuh (css/mine.css, js/mine.js) -->
 <section class="mine-page" id="pageMine" hidden aria-labelledby="tMinePage">
   <header class="mine-bar">
@@ -125,18 +167,22 @@
   </button>
 </section>
 
-<!-- Pertama kali -->
+<!-- Pertama kali: persetujuan usia dan ketentuan -->
 <dialog id="dlgWelcome" aria-labelledby="tWelcome">
   <div class="grab" aria-hidden="true"></div>
   <h2 id="tWelcome">Selamat datang di Love Ocean</h2>
-  <p class="hint first">Tidak perlu daftar. Kamu tetap anonim, dan hanya satu orang yang membaca botolmu.</p>
+  <p class="hint first">Tidak perlu daftar. Kamu tetap anonim. Botolmu dibaca satu orang pada satu waktu.</p>
   <ol class="steps">
     <li><b>Tulis</b> pesan hangat, lalu lempar ke laut.</li>
-    <li><b>Botolmu hanyut</b> sampai seseorang menemukannya.</li>
+    <li><b>Botolmu hanyut</b> sampai seseorang menemukannya. Jika penemunya melepasnya kembali, botolmu hanyut lagi dan kamu diberi tahu.</li>
     <li><b>Balasannya</b> muncul di Botolku. Kamu juga bisa mengambil botol orang lain.</li>
   </ol>
+  <label class="check" for="ageOk">
+    <input type="checkbox" id="ageOk">
+    <span>Saya berusia 18 tahun ke atas dan menyetujui <a class="lnk" href="/privacy" target="_blank" rel="noopener">kebijakan privasi dan ketentuan</a>.</span>
+  </label>
   <div class="row">
-    <button class="btn primary" id="welcomeGo" type="button">Mulai</button>
+    <button class="btn primary" id="welcomeGo" type="button" disabled>Mulai</button>
   </div>
 </dialog>
 
@@ -156,6 +202,41 @@
   </div>
 </dialog>
 
+<!-- Peringatan sebelum mengirim pesan yang memuat tautan, nomor, atau akun -->
+<dialog id="dlgWarn" aria-labelledby="tWarn">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tWarn">Hati-hati membagikan kontak</h2>
+  <p class="hint first">Pesanmu tampaknya memuat tautan, nomor telepon, atau akun media sosial. Jangan bagikan data pribadi kepada orang yang belum kamu kenal, jangan mengirim uang, dan jangan membuka tautan yang mencurigakan.</p>
+  <div class="row">
+    <button class="btn ghost" id="warnEdit" type="button">Ubah pesan</button>
+    <button class="btn primary" id="warnSend" type="button">Tetap kirim</button>
+  </div>
+</dialog>
+
+<!-- Laporkan -->
+<dialog id="dlgReport" aria-labelledby="tReport">
+  <div class="grab" aria-hidden="true"></div>
+  <h2 id="tReport">Laporkan botol ini</h2>
+  <p class="hint first">Botol langsung disembunyikan dari tampilanmu. Pengelola akan meninjaunya. Laporan yang tidak benar bisa membuat akunmu dibatasi.</p>
+  <fieldset class="reasons">
+    <legend>Alasan</legend>
+    <label class="opt"><input type="radio" name="rReason" value="pelecehan" checked><span>Pelecehan atau perundungan</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="seksual"><span>Konten seksual</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="ancaman"><span>Ancaman atau kekerasan</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="kebencian"><span>Ujaran kebencian</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="penipuan_spam"><span>Penipuan, spam, atau tautan berbahaya</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="data_pribadi"><span>Membagikan data pribadi orang lain</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="menyakiti_diri"><span>Ajakan menyakiti diri</span></label>
+    <label class="opt"><input type="radio" name="rReason" value="lainnya"><span>Lainnya</span></label>
+  </fieldset>
+  <label for="rNote">Keterangan (boleh dikosongkan)</label>
+  <textarea id="rNote" maxlength="200" rows="2" placeholder="Ceritakan singkat bila perlu"></textarea>
+  <div class="row">
+    <button class="btn ghost" type="button" data-close>Batal</button>
+    <button class="btn danger" id="rSend" type="button">Kirim laporan</button>
+  </div>
+</dialog>
+
 <!-- Satu botol (Ambil dan Botolku) -->
 <dialog id="dlgBottle" class="chat" aria-labelledby="tBottle">
   <header class="chat-head">
@@ -172,12 +253,14 @@
     </button>
     <div class="chat-menu" id="bMenuBox" hidden>
       <button class="mini" id="bRelease" type="button" hidden>Lepas kembali</button>
+      <button class="mini" id="bBlock" type="button" hidden>Blokir pengguna ini</button>
       <button class="mini" id="bReport" type="button">Laporkan</button>
       <button class="mini" id="bDelete" type="button" hidden>Hapus botol</button>
     </div>
   </header>
 
   <div class="chat-body" id="bScroll">
+    <p class="chat-status" id="bStatus"></p>
     <div class="bubble first" id="bNote">
       <p class="bt" id="bText"></p>
       <span class="bm" id="bFrom"></span>
@@ -229,9 +312,10 @@
   <div class="grab" aria-hidden="true"></div>
   <h2 id="tInfo">Tentang Love Ocean</h2>
   <p class="hint first">Pesan bersifat anonim. Kamu masuk otomatis tanpa daftar, memakai akun anonim yang tersimpan di perangkat ini. Jika data browser atau aplikasi dihapus, akun anonimmu ikut hilang.</p>
-  <p class="hint">Pesan yang melanggar bisa dilaporkan lewat tombol Laporkan. Botol yang dilaporkan langsung disembunyikan.</p>
+  <p class="hint">Botolmu dibaca satu orang pada satu waktu. Jika penemunya melepasnya kembali, botol hanyut lagi dan percakapan sebelumnya dihapus.</p>
+  <p class="hint">Pesan yang melanggar bisa dilaporkan lewat menu titik tiga di dalam botol. Botol yang kamu laporkan langsung disembunyikan dari tampilanmu, lalu ditinjau. Kamu juga bisa memblokir pengguna.</p>
   <p class="hint" id="iosHint" hidden>Di iPhone: ketuk Bagikan, lalu pilih Tambah ke Layar Utama.</p>
-  <p class="hint"><a href="/tentang" class="lnk">Tentang Love Ocean</a> &middot; <a href="/privacy.html" class="lnk">Kebijakan privasi dan ketentuan</a></p>
+  <p class="hint"><a href="/tentang" class="lnk">Tentang Love Ocean</a> &middot; <a href="/privacy" class="lnk">Kebijakan privasi dan ketentuan</a></p>
   <div class="acct">
     <p class="hint" id="acctText"></p>
     <button class="btn primary" id="btnAcct" type="button">Simpan akunku</button>
@@ -246,9 +330,9 @@
 
 <div class="toast" id="toast" popover="manual" role="status" aria-live="polite"></div>
 
-<script src="js/config.js"></script>
-<script src="js/app.js"></script>
-<script src="js/mine.js"></script>
-<script src="js/account.js"></script>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/mine.js"></script>
+<script src="/js/account.js"></script>
 </body>
 </html>
