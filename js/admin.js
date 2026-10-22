@@ -23,8 +23,8 @@
     lainnya: 'Lainnya', tidak_ada: ''
   };
   const NOTE = {
-    tinjau: 'Laporan yang dinilai AI melanggar, ragu, atau gagal diperiksa. Botolnya sudah disembunyikan dari laut.',
-    ai: 'Laporan yang dinilai AI tidak melanggar. Botolnya sudah dikembalikan ke laut. Kamu bisa membatalkannya.',
+    tinjau: 'Laporan yang dinilai AI melanggar, ragu, atau gagal diperiksa. Pelapor sudah tidak melihat botolnya; botol disembunyikan dari semua orang setelah AI menilai melanggar, dua pelapor, atau keputusanmu.',
+    ai: 'Laporan yang ditutup AI karena dinilai tidak melanggar. Botolnya tidak berubah. Kamu bisa membukanya lagi (botol disembunyikan untuk semua).',
     selesai: 'Laporan yang sudah kamu putuskan.'
   };
 
@@ -210,7 +210,9 @@
     const cat = CATEGORY[it.ai_category];
     if (cat) head.appendChild(el('span', 'chip', cat));
     if (it.ai_confidence != null && it.ai_status && it.ai_status !== 'memeriksa') head.appendChild(el('span', 'chip', 'yakin ' + it.ai_confidence + '%'));
+    if (it.report_category && CATEGORY[it.report_category]) head.appendChild(el('span', 'chip', 'Pelapor: ' + CATEGORY[it.report_category]));
     if (it.hidden) head.appendChild(el('span', 'chip', 'disembunyikan'));
+    if (it.bottle_deleted) head.appendChild(el('span', 'chip warn', 'botol sudah dihapus (isi dari salinan laporan)'));
     head.appendChild(el('span', 'when', ago(it.created_at)));
     c.appendChild(head);
 
@@ -243,7 +245,7 @@
       if (it.caught) acts.appendChild(actionBtn('Blokir penemu', 'bad', () => resolve(it.id, 'blokir_penemu', 'Penemu diblokir.'), true));
       if (it.ai_status !== 'sah') acts.appendChild(actionBtn('Periksa AI lagi', '', () => recheck(it.id)));
     } else if (tab === 'ai') {
-      acts.appendChild(actionBtn('Sembunyikan lagi', 'warn', () => resolve(it.id, 'tinjau_ulang', 'Botol disembunyikan lagi dan masuk antrean.'), true));
+      acts.appendChild(actionBtn('Buka lagi dan sembunyikan', 'warn', () => resolve(it.id, 'tinjau_ulang', 'Botol disembunyikan lagi dan masuk antrean.'), true));
       acts.appendChild(actionBtn('Hapus botol', 'bad', () => resolve(it.id, 'hapus', 'Botol dihapus.'), true));
     } else if (it.resolved_action) {
       acts.appendChild(el('span', 'when', 'Keputusan: ' + it.resolved_action.replace(/_/g, ' ')));

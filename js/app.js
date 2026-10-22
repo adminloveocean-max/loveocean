@@ -13,7 +13,7 @@
   // Kunci sesi dan nama tetap sama dengan versi sebelumnya supaya akun anonim lama tetap terbaca.
   const K = {
     session: 'loveocean.session.v2', name: 'loveocean.nick.v2', seen: 'loveocean.seen.v2',
-    draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3'
+    draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3', age: 'loveocean.age.v1'
   };
   const $ = (s) => document.querySelector(s);
 
@@ -38,6 +38,11 @@
     limit_balasan: 'Terlalu banyak balasan dalam satu jam. Coba lagi nanti.',
     limit_harian: 'Kamu sudah mengambil 15 botol hari ini. Coba lagi besok.',
     percakapan_penuh: 'Percakapan ini sudah mencapai 100 balasan.',
+    limit_laporan: 'Terlalu banyak laporan atau blokir hari ini. Coba lagi besok.',
+    limit_lepas: 'Kamu terlalu sering melepas botol hari ini. Coba lagi besok.',
+    percakapan_ditutup: 'Percakapan ini sudah ditutup. Pesan tidak bisa dikirim.',
+    bottles_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
+    replies_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
     pesan_kosong: 'Pesan tidak boleh kosong.',
     tidak_boleh: 'Aksi ini tidak diizinkan untuk botol tersebut.'
   };
@@ -120,6 +125,15 @@
   /* ---------- sesi anonim (tanpa library) ---------- */
   let session = lsGet(K.session, null);
   let sessionJob = null;
+  const isFresh = (x) => !!(x && x.access_token && x.expires_at * 1000 - Date.now() > 60000);
+  const isEmailAccount = (x) => !!(x && x.user && x.user.email && x.user.is_anonymous !== true);
+  // Satu pembaruan sesi pada satu waktu di semua tab dan jendela (token penyegar hanya bisa dipakai sekali).
+  async function withLock(fn) {
+    if (navigator.locks && navigator.locks.request) return navigator.locks.request('loveocean-session', fn);
+    return fn();
+  }
+  // Tab lain memperbarui sesi: ikuti, jangan membuat akun sendiri.
+  window.addEventListener('storage', (e) => { if (e.key === K.session) session = lsGet(K.session, null); });
 
   async function authCall(path, body) {
     const res = await fetch(BASE + '/auth/v1/' + path, {
@@ -136,25 +150,36 @@
     return data;
   }
   function ensureSession() {
-    if (session && session.expires_at * 1000 - Date.now() > 60000) return Promise.resolve(session);
+    if (isFresh(session)) return Promise.resolve(session);
     if (sessionJob) return sessionJob;
-    sessionJob = (async () => {
-      try {
-        if (session && session.refresh_token) {
-          try {
-            session = await authCall('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
-            lsSet(K.session, session);
-            return session;
-          } catch (e) {
-            // Akun baru dibuat hanya bila server jelas menolak token. Gangguan jaringan atau server tidak boleh mengganti akun.
-            if (!navigator.onLine || ![400, 401, 403, 404, 422].includes(e.status)) throw e;
-          }
+    sessionJob = withLock(async () => {
+      // Saat menunggu giliran, tab lain mungkin sudah memperbarui sesi.
+      const stored = lsGet(K.session, null);
+      if (isFresh(stored)) { session = stored; return session; }
+      let base = stored && stored.refresh_token ? stored : session;
+      const before = base;
+      for (let attempt = 0; base && base.refresh_token && attempt < 2; attempt++) {
+        try {
+          session = await authCall('token?grant_type=refresh_token', { refresh_token: base.refresh_token });
+          lsSet(K.session, session);
+          return session;
+        } catch (e) {
+          // Gangguan jaringan atau server tidak boleh mengganti akun.
+          if (!navigator.onLine || ![400, 401, 403, 404, 422].includes(e.status)) throw e;
+          // Ditolak: mungkin tab lain baru saja memutar token. Periksa penyimpanan sebelum menyerah.
+          const again = lsGet(K.session, null);
+          if (isFresh(again)) { session = again; return session; }
+          if (again && again.refresh_token && again.refresh_token !== base.refresh_token) { base = again; continue; }
+          break;
         }
-        session = await authCall('signup', {});
-        lsSet(K.session, session);
-        return session;
-      } finally { sessionJob = null; }
-    })();
+      }
+      // Server jelas menolak sesi lama: buat akun anonim baru.
+      const hadEmail = isEmailAccount(before) || isEmailAccount(session);
+      session = await authCall('signup', {});
+      lsSet(K.session, session);
+      if (hadEmail) setTimeout(() => toast('Sesi akunmu berakhir. Masuk lagi dengan email (tombol i) untuk membuka botolmu.', 7000), 300);
+      return session;
+    }).finally(() => { sessionJob = null; });
     return sessionJob;
   }
   async function api(path, opt, retry) {
@@ -207,27 +232,6 @@
     return data;
   }
 
-  /* ---------- ombak ---------- */
-  function wavePath(a) {
-    let d = 'M0 24 Q25 ' + (24 - a) + ' 50 24';
-    for (let x = 100; x <= 800; x += 50) d += ' T' + x + ' 24';
-    return d + ' V46 H0 Z';
-  }
-  function buildWaves() {
-    const add = (box, cls, amp) => {
-      const s = document.createElementNS(SVGNS, 'svg');
-      s.setAttribute('class', 'wave ' + cls);
-      s.setAttribute('viewBox', '0 0 800 46');
-      s.setAttribute('preserveAspectRatio', 'none');
-      const p = document.createElementNS(SVGNS, 'path');
-      p.setAttribute('d', wavePath(amp));
-      s.appendChild(p);
-      $(box).appendChild(s);
-    };
-    add('#wavesBack', 'w1', 7); add('#wavesBack', 'w2', 9);
-    add('#wavesFront', 'w3', 10); add('#wavesFront', 'w4', 12);
-  }
-
   /* ---------- laut ---------- */
   let sea = { count: 0, moods: [] };
   let seaKey = '';
@@ -252,16 +256,19 @@
       const m = moodOf(mood);
       const b = el('button', 'bottle');
       b.type = 'button';
-      b.style.left = p.l + '%';
+      b.style.setProperty('--l', p.l + '%');
       b.style.top = p.t + '%';
       b.style.setProperty('--mood', m.color);
-      b.style.setProperty('--s', (0.66 + p.t / 100 * 1.05).toFixed(2));
+      b.style.setProperty('--s', (0.7 + p.t / 100 * 0.9).toFixed(2));
       b.style.setProperty('--dur', (8 + (i * 1.7) % 6).toFixed(1) + 's');
+      b.style.setProperty('--dur2', (5 + (i * 0.9) % 3).toFixed(1) + 's');
       b.style.setProperty('--delay', '-' + ((i * 2.3) % 7).toFixed(1) + 's');
       b.setAttribute('aria-label', 'Ambil botol bersuasana ' + m.label.toLowerCase());
+      b.appendChild(el('span', 'shadow'));
       const sway = el('span', 'sway');
-      sway.appendChild(useSvg('bottle', '0 0 48 80'));
+      sway.appendChild(useSvg('bottle', '0 0 150 56'));
       b.appendChild(sway);
+      b.appendChild(el('span', 'water'));
       b.addEventListener('click', () => { b.classList.add('catching'); vib(12); take(mood, b); });
       box.appendChild(b);
     });
@@ -293,10 +300,57 @@
     bd.hidden = total === 0;
     document.title = total ? '(' + total + ') ' + BASE_TITLE : BASE_TITLE;
   }
+  const DAY = 86400000;
+  const daysLeft = (from, days) => Math.max(0, Math.ceil((Date.parse(from) + days * DAY - Date.now()) / DAY));
+  // Status dan riwayat satu botol, dipakai di daftar Botolku dan di dalam botol.
+  function statusOf(b) {
+    const mine = b.author === myId();
+    const n = Number(b.release_count) || 0;
+    if (b.hidden) return { label: 'Sedang ditinjau', detail: 'Botol ini disembunyikan dari laut sampai peninjauan selesai.' };
+    if (mine && !b.caught_by) {
+      const left = ' Hilang otomatis dalam ' + daysLeft(b.created_at, 14) + ' hari.';
+      return n > 0
+        ? { label: 'Hanyut lagi', detail: 'Botolmu pernah ditemukan lalu dilepas kembali' + (n > 1 ? ' (' + n + ' kali)' : '') + ', dan kini hanyut lagi. Percakapan sebelumnya dihapus.' + left }
+        : { label: 'Hanyut', detail: 'Botolmu masih hanyut dan belum ditemukan.' + left };
+    }
+    if (mine) {
+      return { label: 'Ditemukan', detail: 'Seseorang menemukan botolmu. Percakapan hanya terlihat olehmu dan dia. Hilang otomatis dalam ' + daysLeft(b.caught_at || b.created_at, 30) + ' hari.' };
+    }
+    const replied = myReplyMeta.some((r) => r.bottle_id === b.id);
+    return replied
+      ? { label: 'Percakapan', detail: 'Percakapan hanya terlihat olehmu dan pembuat botol. Hilang otomatis dalam ' + daysLeft(b.caught_at || b.created_at, 30) + ' hari.' }
+      : { label: 'Kamu menemukan', detail: 'Balas dalam ' + daysLeft(b.caught_at || b.created_at, 3) + ' hari, atau botol ini kembali hanyut ke laut.' };
+  }
   async function loadMine() {
     myBottles = await api('/rest/v1/bottles?select=*&order=created_at.desc&limit=100');
-    myReplyMeta = await api('/rest/v1/replies?select=bottle_id,author,nickname,message,created_at,deleted_at&order=created_at.desc&limit=500');
+    myReplyMeta = await api('/rest/v1/replies?select=bottle_id,author,nickname,message,created_at,deleted_at&order=created_at.desc&limit=300');
     updateBadge();
+  }
+
+  /* ---------- tombol sibuk dan peringatan kontak ---------- */
+  function setBusy(btn, on) {
+    btn.disabled = on;
+    btn.classList.toggle('is-busy', on);
+    btn.setAttribute('aria-busy', String(on));
+  }
+  // Tautan, nomor telepon, atau akun media sosial: tampilkan peringatan sebelum mengirim.
+  const CONTACT = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|net|org|id|my|co|io|me|xyz|link|app|info|site|online)\b|@[a-z0-9_.]{3,}|(?:\d[ .\-()]{0,2}){9,}|\b(?:whatsapp|telegram|instagram|tiktok|wa|ig)\b)/i;
+  function confirmContact(text) {
+    if (!CONTACT.test(text)) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const d = $('#dlgWarn');
+      let result = false;
+      const send = () => { result = true; d.close(); };
+      const edit = () => { result = false; d.close(); };
+      $('#warnSend').addEventListener('click', send, { once: true });
+      $('#warnEdit').addEventListener('click', edit, { once: true });
+      d.addEventListener('close', () => {
+        $('#warnSend').removeEventListener('click', send);
+        $('#warnEdit').removeEventListener('click', edit);
+        resolve(result);
+      }, { once: true });
+      openDlg(d);
+    });
   }
 
   /* ---------- lempar satu ---------- */
@@ -322,7 +376,7 @@
     const b = el('div', 'thrown');
     b.style.setProperty('--mood', moodOf(key).color);
     b.style.setProperty('--tx', tx + 'px');
-    b.appendChild(useSvg('bottle', '0 0 48 80'));
+    b.appendChild(useSvg('bottle', '0 0 150 56'));
     const ring = el('div', 'ring');
     ring.style.left = 'calc(50% + ' + tx + 'px)';
     scene.appendChild(b);
@@ -331,11 +385,13 @@
   }
   function doThrow() {
     return once('throw', async () => {
-      const text = $('#inMsg').value.trim().slice(0, MAX);
+      const text = $('#inMsg').value.trim();
       const name = $('#inName').value.trim().slice(0, 30);
       if (!text) { toast('Tulis pesanmu dulu sebelum melempar botol.'); $('#inMsg').focus(); return; }
+      if (text.length > MAX) { toast('Pesan terlalu panjang. Maksimal ' + MAX + ' karakter.'); return; }
+      if (!(await confirmContact(text))) { $('#inMsg').focus(); return; }
       const btn = $('#doThrow');
-      btn.disabled = true;
+      setBusy(btn, true);
       try {
         await api('/rest/v1/bottles', { method: 'POST', body: { nickname: name, message: text, mood } });
         lsSet(K.name, name);
@@ -346,8 +402,8 @@
         toast('Botolmu hanyut ke laut. Jika ada yang menemukannya, balasan muncul di Botolku.', 4800);
         loadMine().catch(() => {});
         refreshSea();
-      } catch (e) { toast(human(e), 5000); }
-      finally { btn.disabled = false; }
+      } catch (e) { toast(diagnose(e), 5000); }
+      finally { setBusy(btn, false); }
     });
   }
 
@@ -580,13 +636,12 @@
       : 'Dari ' + (b.nickname || 'seseorang di tepi laut') + ', ' + ago(b.created_at);
     $('#bRelease').hidden = iAmAuthor;
     $('#bDelete').hidden = !iAmAuthor;
-    $('#bReport').hidden = !!b.hidden;
+    $('#bReport').hidden = !!b.hidden || (iAmAuthor && !b.caught_by);
+    $('#bBlock').hidden = !!b.hidden || !b.caught_by;
     $('#bReplyBox').hidden = !((!iAmAuthor || !!b.caught_by) && !b.hidden);
-    $('#bHint').textContent = b.hidden
-      ? 'Botol ini sedang ditinjau dan disembunyikan dari laut.'
-      : iAmAuthor
-        ? (b.caught_by ? 'Seseorang menemukan botolmu. Percakapan ini hanya terlihat olehmu dan dia.' : 'Botolmu masih hanyut. Belum ada yang menemukannya.')
-        : 'Hanya kamu dan pembuat botol yang bisa melihat percakapan ini.';
+    const st = statusOf(b);
+    $('#bHint').textContent = st.label;
+    $('#bStatus').textContent = st.detail;
     $('#inReply').value = '';
     growReply();
     $('#countR').textContent = '0 / ' + MAX;
@@ -601,10 +656,12 @@
   function doReply() {
     return once('reply', async () => {
       if (!cur) return;
-      const text = $('#inReply').value.trim().slice(0, MAX);
+      const text = $('#inReply').value.trim();
       if (!text) { toast('Tulis balasanmu dulu.'); return; }
+      if (text.length > MAX) { toast('Pesan terlalu panjang. Maksimal ' + MAX + ' karakter.'); return; }
+      if (!(await confirmContact(text))) { $('#inReply').focus(); return; }
       const btn = $('#doReply');
-      btn.disabled = true;
+      setBusy(btn, true);
       try {
         if (editing) {
           if (text === editing.message) { cancelEdit(); return; }
@@ -621,8 +678,8 @@
         }
         await loadReplies();
         toBottom();
-      } catch (e) { toast(editing ? diagnose(e) : human(e), 5000); }
-      finally { btn.disabled = false; }
+      } catch (e) { toast(diagnose(e), 5000); }
+      finally { setBusy(btn, false); }
     });
   }
   function closeBottle() { clearInterval(pollTimer); pollTimer = null; cur = null; closeMsgMenu(); cancelEdit(); cancelReply(); }
@@ -664,17 +721,41 @@
     try { await rpc('release_bottle', { p_id: cur.id }); $('#dlgBottle').close(); toast('Botol dilepas kembali ke laut.'); afterChange(); }
     catch (e) { toast(human(e)); }
   });
-  confirmBtn($('#bReport'), 'Laporkan', async () => {
+  // Laporan: pilih alasan. Botol langsung disembunyikan dari tampilan pelapor saja; selanjutnya ditinjau.
+  $('#bReport').addEventListener('click', () => {
+    if (!cur) return;
+    $('#bMenuBox').hidden = true;
+    $('#rNote').value = '';
+    const first = document.querySelector('input[name="rReason"]');
+    if (first) first.checked = true;
+    openDlg($('#dlgReport'));
+  });
+  $('#rSend').addEventListener('click', () => once('report', async () => {
     if (!cur) return;
     const bid = cur.id; // cur menjadi null begitu dialog ditutup
+    const checked = document.querySelector('input[name="rReason"]:checked');
+    const cat = (checked && checked.value) || 'lainnya';
+    const note = $('#rNote').value.trim().slice(0, 200);
+    const btn = $('#rSend');
+    setBusy(btn, true);
     try {
-      await rpc('report_bottle', { p_id: bid, p_reason: '' });
+      await rpc('report_bottle', { p_id: bid, p_reason: note, p_category: cat });
+      $('#dlgReport').close();
       $('#dlgBottle').close();
-      toast('Terima kasih. Botol ini sudah disembunyikan dan akan ditinjau.', 4500);
+      toast('Terima kasih. Botol disembunyikan dari tampilanmu dan akan ditinjau.', 4500);
       afterChange();
       requestReview(bid);
-    }
-    catch (e) { toast(human(e)); }
+    } catch (e) { toast(diagnose(e), 5000); }
+    finally { setBusy(btn, false); }
+  }));
+  confirmBtn($('#bBlock'), 'Blokir pengguna ini', async () => {
+    if (!cur) return;
+    try {
+      await rpc('block_other', { p_id: cur.id });
+      $('#dlgBottle').close();
+      toast('Pengguna diblokir. Kalian tidak akan dipertemukan lagi.', 4500);
+      afterChange();
+    } catch (e) { toast(diagnose(e), 5000); }
   });
   confirmBtn($('#bDelete'), 'Hapus botol', async () => {
     if (!cur) return;
@@ -686,6 +767,10 @@
   function setDock(disabled) { ['#btnTake', '#btnThrow', '#btnMine'].forEach((s) => { $(s).disabled = disabled; }); }
   function take(wantMood, srcEl) {
     return once('take', async () => {
+      const lbl = $('#btnTake span');
+      const lblOld = lbl.textContent;
+      lbl.textContent = 'Mencari...';
+      $('#btnTake').setAttribute('aria-busy', 'true');
       setDock(true);
       try {
         const rows = await rpc('catch_bottle', wantMood ? { p_mood: wantMood } : {});
@@ -703,7 +788,7 @@
       } catch (e) {
         if (srcEl) srcEl.classList.remove('catching');
         toast(human(e), 5000);
-      } finally { setDock(!CONFIGURED); }
+      } finally { setDock(!CONFIGURED); lbl.textContent = lblOld; $('#btnTake').removeAttribute('aria-busy'); }
     });
   }
 
@@ -826,8 +911,16 @@
   // menu titik tiga di header chat
   $('#bMenu').addEventListener('click', (e) => { e.stopPropagation(); const m = $('#bMenuBox'); m.hidden = !m.hidden; });
   document.addEventListener('click', (e) => { const m = $('#bMenuBox'); if (!m.hidden && !m.contains(e.target)) m.hidden = true; closeMsgMenu(); });
-  $('#welcomeGo').addEventListener('click', () => $('#dlgWelcome').close());
-  $('#dlgWelcome').addEventListener('close', () => lsSet(K.welcome, true));
+  let ageAccepted = !!lsGet(K.age, false);
+  $('#ageOk').addEventListener('change', () => { $('#welcomeGo').disabled = !$('#ageOk').checked; });
+  $('#welcomeGo').addEventListener('click', () => {
+    if (!$('#ageOk').checked) return;
+    ageAccepted = true; lsSet(K.age, true); lsSet(K.welcome, true);
+    $('#dlgWelcome').close();
+  });
+  // Tidak bisa ditutup sebelum menyetujui.
+  $('#dlgWelcome').addEventListener('cancel', (e) => { if (!ageAccepted) e.preventDefault(); });
+  $('#dlgWelcome').addEventListener('close', () => { if (!ageAccepted) setTimeout(() => openDlg($('#dlgWelcome')), 0); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       if (CONFIGURED && navigator.onLine) { refreshSea(); loadMine().catch(() => {}); loadReplies(); }
@@ -851,7 +944,7 @@
   window.LO = {
     get bottles() { return myBottles; },
     get replies() { return myReplyMeta; },
-    unreadFor, myId, moodOf, ago, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
+    unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
     get session() { return session; },
     setSession(s) { session = s; lsSet(K.session, s); },
     // dipanggil setelah masuk/menyimpan akun: muat ulang data milik akun ini
@@ -865,13 +958,12 @@
     }
   };
 
-  buildWaves();
   updateCount();
   start();
-  if (!lsGet(K.welcome, false)) openDlg($('#dlgWelcome'));
+  if (!ageAccepted) openDlg($('#dlgWelcome'));
   setInterval(() => {
     if (CONFIGURED && document.visibilityState === 'visible' && navigator.onLine) { refreshSea(); loadMine().catch(() => {}); }
-  }, 30000);
+  }, 60000);
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/service-worker.js').catch(() => {}); });

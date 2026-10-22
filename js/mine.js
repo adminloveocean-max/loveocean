@@ -100,7 +100,7 @@
       let text, ts;
       if (last) { text = (last.author === me ? 'Kamu: ' : '') + (last.deleted_at ? 'Pesan dihapus' : (last.message || '')); ts = last.created_at; }
       else { text = (mine ? 'Kamu: ' : '') + (b.message || ''); ts = b.created_at; }
-      return { b, name, text: text.replace(/\s+/g, ' '), ts, unread: LO.unreadFor(b.id) };
+      return { b, name, text: text.replace(/\s+/g, ' '), ts, unread: LO.unreadFor(b.id), stat: LO.statusOf(b).label };
     }).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts));
   }
 
@@ -130,6 +130,7 @@
       if (e.unread) bot.appendChild(el('b', 'c-badge', e.unread > 9 ? '9+' : String(e.unread)));
       main.appendChild(top);
       main.appendChild(bot);
+      main.appendChild(el('span', 'c-stat', e.stat));
       open.appendChild(ava);
       open.appendChild(main);
       open.addEventListener('click', () => LO.openBottle(e.b));
