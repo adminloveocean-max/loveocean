@@ -13,7 +13,7 @@
 .chat-row:active{background:rgba(28,27,58,.06)}
 .c-open:focus-visible,.c-del:focus-visible{outline:3px solid #ff5f84;outline-offset:-3px}
 .c-open{flex:1;min-width:0;align-self:stretch;display:flex;align-items:center;gap:14px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left}
-.c-del{flex:none;min-width:44px;height:44px;padding:0 10px;border:0;border-radius:22px;background:none;color:#8b8b97;display:grid;place-items:center;font-size:13px;font-weight:700}
+.c-del{flex:none;min-width:44px;height:44px;padding:0 10px;border:0;border-radius:22px;background:none;color:#5f5f73;display:grid;place-items:center;font-size:13px;font-weight:700}
 .c-del .ic{width:22px;height:22px}
 .c-del.armed{color:#fff;background:#c23a63}
 .c-del:disabled{opacity:.5}
@@ -23,13 +23,14 @@
 .c-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
 .c-top,.c-bot{display:flex;align-items:center;gap:10px;min-width:0}
 .c-name{flex:1;min-width:0;font-size:17px;font-weight:500;color:#1c1b3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.c-time{flex:none;font-size:12.5px;color:#8b8b97}
-.c-prev{flex:1;min-width:0;font-size:15px;color:#8b8b97;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-time{flex:none;font-size:12.5px;color:#5f5f73}
+.c-prev{flex:1;min-width:0;font-size:15px;color:#5f5f73;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .c-badge{flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#ff5f84;color:#fff;font-size:12px;font-weight:700;line-height:22px;text-align:center}
+.c-stat{font-size:12.5px;font-weight:600;color:#0b6b78}
 .chat-row.unread .c-name{font-weight:700}
 .chat-row.unread .c-prev{color:#3b3a55}
 .chat-row.unread .c-time{color:#e5557c;font-weight:600}
-.mine-empty{padding:56px 28px;text-align:center;color:#8b8b97;line-height:1.6;font-size:15px}
+.mine-empty{padding:56px 28px;text-align:center;color:#5f5f73;line-height:1.6;font-size:15px}
 
 .mine-fab{position:absolute;right:18px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border:0;border-radius:50%;display:grid;place-items:center;
   color:#3a0f22;background:linear-gradient(135deg,#ffc9a8,#ff5f84);box-shadow:0 8px 22px rgba(255,95,132,.5)}

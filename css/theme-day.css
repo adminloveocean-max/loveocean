@@ -1,0 +1,195 @@
+/* Love Ocean: tema siang di pantai (laut tosca, ombak berbusa, pasir).
+   Dipasang SETELAH css/chat.css. Latar: day/beach.webp. Botol kaca digambar sebagai SVG (#bottle di index.html). */
+
+:root{
+  --teal-d:#0b4f5c; --teal-m:#0b6b78; --teal-s:#2f5963;
+  --foam:#10424c; --peach:#0b6b78; --sun:#0b4f5c;
+  --heart:#ff5f84; --paper:#fff6e4;
+}
+body{background:#a6dcd8;color:var(--foam)}
+.lnk{color:var(--teal-m);text-decoration:underline;text-underline-offset:2px}
+
+/* ================= ADEGAN ================= */
+.scene{position:absolute;inset:0;z-index:0;overflow:hidden;background:#a6dcd8}
+/* kotak seukuran foto (cover): semua yang ada di dalamnya menempel pada foto di layar apa pun */
+.stage{position:absolute;left:50%;top:50%;width:max(100vw,calc(100vh*.5631));width:max(100vw,calc(100dvh*.5631));
+  aspect-ratio:1080/1918;transform:translate(-50%,-50%);
+  background:#a6dcd8 url("/day/beach.webp") center/100% 100% no-repeat}
+/* selebar layar yang terlihat (bukan selebar foto), supaya botol tidak terpotong di ponsel yang tinggi */
+.sea{position:absolute;left:50%;right:auto;width:min(100vw,100%);transform:translateX(-50%);top:31%;bottom:auto;height:26%;background:none}
+.bottles{position:absolute;inset:0}
+
+/* ================= GELOMBANG ================= */
+/* Lima lapis gelombang bergerak di atas foto laut: yang jauh tipis dan lambat, yang dekat tinggi dan cepat.
+   Tinggi dan posisi memakai persen foto, jadi menempel pada foto di layar apa pun. */
+.waves{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;overflow:hidden}
+.waves.back,.waves.front{top:0;bottom:0;height:100%}
+/* ombak sudah digambar di dalam foto latar; lapisan garis animasi dimatikan agar tidak terlihat seperti garis putih */
+.waves{display:none}
+/* ombak hidup: dua gambar laut dengan posisi ombak berbeda saling bergantian pelan, jadi ombak terlihat bergulung walau tidak ada botol */
+.swell2{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:0;
+  background:url("/day/beach2.webp") center/100% 100% no-repeat;animation:swellB 7s ease-in-out infinite}
+@keyframes swellB{0%,100%{opacity:0}50%{opacity:1}}
+.waves.back{z-index:0}.waves.front{z-index:2}
+.wv{position:absolute;left:0;right:0;animation:swell var(--sw,6s) ease-in-out var(--sd,0s) infinite}
+.wv svg{display:block;width:200%;height:100%;animation:flow var(--fl,30s) linear infinite;will-change:transform}
+.wv .wf{fill:url(#wv-fill)}
+.wv .wc{fill:none;stroke:#fff;stroke-linecap:round;stroke-width:1.4;vector-effect:non-scaling-stroke;opacity:.4}
+.wv1{top:33.5%;height:1.5%;opacity:.5;--fl:46s;--sw:7s}
+.wv2{top:38.8%;height:2%;opacity:.62;--fl:34s;--sw:6.2s;--sd:-1.5s}.wv2 svg{animation-direction:reverse}
+.wv3{top:44.5%;height:2.6%;opacity:.74;--fl:26s;--sw:5.6s;--sd:-3s}
+.wv4{top:50.5%;height:3.2%;opacity:.86;--fl:20s;--sw:5s;--sd:-.8s}.wv4 svg{animation-direction:reverse}
+.wv5{top:56.2%;height:3.8%;opacity:.95;--fl:15s;--sw:4.4s;--sd:-2.2s}
+.wv5 .wc{stroke-width:1.8}
+.wv5 .wf{opacity:1}
+@keyframes flow{to{transform:translateX(-50%)}}
+@keyframes swell{0%,100%{transform:translateY(-.25%)}50%{transform:translateY(.45%)}}
+
+/* kilau matahari di permukaan air */
+.glints{position:absolute;left:0;right:0;top:30%;height:30%;pointer-events:none;overflow:hidden}
+.glints i{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;opacity:0;
+  box-shadow:0 0 6px 2px rgba(255,255,255,.75);animation:sparkle 3.4s ease-in-out infinite}
+.glints i:nth-child(1){left:12%;top:14%;animation-delay:-.4s}.glints i:nth-child(2){left:28%;top:52%;animation-delay:-1.9s;width:4px;height:4px}
+.glints i:nth-child(3){left:44%;top:26%;animation-delay:-1.1s}.glints i:nth-child(4){left:61%;top:62%;animation-delay:-2.6s;width:6px;height:6px}
+.glints i:nth-child(5){left:76%;top:20%;animation-delay:-.8s;width:4px;height:4px}.glints i:nth-child(6){left:88%;top:48%;animation-delay:-2.2s}
+.glints i:nth-child(7){left:20%;top:78%;animation-delay:-3s;width:4px;height:4px}.glints i:nth-child(8){left:52%;top:84%;animation-delay:-1.5s}
+.glints i:nth-child(9){left:70%;top:90%;animation-delay:-.2s;width:4px;height:4px}.glints i:nth-child(10){left:36%;top:6%;animation-delay:-2.9s;width:4px;height:4px}
+@keyframes sparkle{0%,100%{opacity:0;transform:scale(.4)}45%{opacity:.95;transform:scale(1)}70%{opacity:.2;transform:scale(.7)}}
+
+/* ================= BOTOL MENGAPUNG ================= */
+/* l = posisi kiri dari app.js (--l); dijepit supaya botol paling kanan tidak terpotong */
+.bottle{position:absolute;display:block;padding:0;border:0;background:none;color:var(--mood,#ff5f84);
+  width:calc(124px*var(--s,1));height:calc(48px*var(--s,1));overflow:visible;clip-path:none;
+  left:clamp(4px,var(--l,10%),calc(100% - 132px*var(--s,1)));
+  animation:drift var(--dur,9s) ease-in-out var(--delay,0s) infinite alternate}
+.bottle::before{content:"";position:absolute;inset:-14px -10px -18px}
+/* riak di garis air */
+.bottle::after{content:"";position:absolute;left:-12%;right:-12%;top:40%;height:26%;border-radius:50%;background:none;
+  border:1.5px solid rgba(255,255,255,.7);opacity:0;animation:ripple 4s ease-out var(--delay,0s) infinite;pointer-events:none}
+.bottle .shadow{position:absolute;left:8%;right:0;top:58%;height:34%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(8,76,86,.38),transparent);filter:blur(2px)}
+.bottle .sway{position:absolute;inset:0;display:block;transform-origin:50% 52%;
+  animation:bobDay var(--dur2,5.6s) ease-in-out var(--delay,0s) infinite;
+  filter:drop-shadow(0 2px 2px rgba(8,76,86,.35))}
+.bottle:nth-child(even) .sway svg{transform:scaleX(-1)}
+.bottle:nth-child(even) .sway{animation-name:bobDayR}
+.bottle .sway svg{width:100%;height:100%;display:block;pointer-events:none}
+/* air di depan botol: separuh bawah botol terlihat tenggelam dan membiaskan warna laut */
+.bottle .water{position:absolute;left:-8%;right:-8%;top:48%;bottom:-16%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(104,222,212,.8) 0,rgba(58,190,194,.66) 38%,rgba(48,178,190,0) 92%);
+  clip-path:polygon(0 12%,7% 5%,16% 11%,27% 4%,39% 10%,52% 4%,64% 11%,76% 5%,88% 10%,100% 5%,100% 100%,0 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 16%,#000 84%,transparent 100%);
+  animation:waterBob var(--dur2,5.6s) ease-in-out var(--delay,0s) infinite}
+.bottle:hover .sway,.bottle:focus-visible .sway{filter:drop-shadow(0 2px 2px rgba(8,76,86,.35)) brightness(1.06) saturate(1.1)}
+.bottle:focus-visible{outline:3px solid #0b4f5c;outline-offset:2px;border-radius:12px}
+.bottle.catching{animation:catching .5s ease-in forwards}
+.bottle.catching::after{display:none}
+@keyframes bobDay{0%,100%{transform:translateY(1px) rotate(-11deg)}50%{transform:translateY(-3px) rotate(-4deg)}}
+@keyframes bobDayR{0%,100%{transform:translateY(1px) rotate(11deg)}50%{transform:translateY(-3px) rotate(4deg)}}
+@keyframes waterBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.5px)}}
+@keyframes drift{from{transform:translate(-14px,0)}to{transform:translate(14px,2px)}}
+@keyframes ripple{0%{opacity:.8;transform:scale(.75)}70%{opacity:0;transform:scale(1.25)}100%{opacity:0;transform:scale(1.25)}}
+
+/* botol yang baru dilempar */
+.thrown{position:absolute;z-index:3;left:50%;bottom:150px;width:110px;height:43px;margin-left:-55px;pointer-events:none;color:var(--mood,#ff5f84);
+  opacity:0;animation:flyDay 2.6s var(--ease) forwards}
+.thrown svg{width:100%;height:100%;filter:drop-shadow(0 4px 4px rgba(8,76,86,.35))}
+.ring{position:absolute;z-index:2;bottom:calc(150px + 33vh);width:64px;height:20px;margin-left:-32px;border:2px solid rgba(255,255,255,.85);border-radius:50%;opacity:0;animation:ring 1.6s 2.2s ease-out forwards}
+@keyframes flyDay{
+  0%{opacity:0;transform:translate(0,0) scale(1.4) rotate(-20deg)}
+  12%{opacity:1}
+  45%{transform:translate(calc(var(--tx,0px)*.6),-52vh) scale(1.05) rotate(160deg)}
+  85%{opacity:1;transform:translate(var(--tx,0px),-34vh) scale(.62) rotate(330deg)}
+  100%{opacity:0;transform:translate(var(--tx,0px),-33vh) scale(.5) rotate(350deg)}}
+
+/* ================= ATAS ================= */
+h1{color:var(--teal-d);text-shadow:0 1px 0 rgba(255,255,255,.85),0 2px 14px rgba(255,255,255,.75)}
+.tagline{color:#0b4f5c;font-weight:600;text-shadow:0 1px 8px rgba(255,255,255,.8)}
+.round,.install{border:1.5px solid rgba(11,79,92,.28);background:rgba(255,255,255,.78);color:var(--teal-d);
+  box-shadow:0 4px 14px rgba(11,79,92,.15);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pill{background:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.9);color:var(--teal-d);
+  box-shadow:0 4px 14px rgba(11,79,92,.12);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pill .dot{background:#1fa971;box-shadow:0 0 0 3px rgba(31,169,113,.2)}
+.pill.off .dot{background:#d9822b;box-shadow:0 0 0 3px rgba(217,130,43,.2)}
+
+/* tautan kecil di atas dock, untuk pengguna dan mesin pencari */
+.legal{position:absolute;left:0;right:0;z-index:5;margin:0;text-align:center;font-size:13px;line-height:1;color:var(--teal-d);
+  bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+.legal a{display:inline-block;padding:9px 10px;color:var(--teal-d);font-weight:600;text-decoration:underline;text-underline-offset:3px;
+  background:rgba(255,255,255,.55);border-radius:999px}
+.legal a+span{display:none}
+.noscript{position:fixed;left:16px;right:16px;top:50%;transform:translateY(-50%);z-index:60;padding:18px;border-radius:16px;background:#fff;color:#10424c;text-align:center;line-height:1.6}
+
+/* ================= DOCK ================= */
+.dock{background:none}
+.dock-btn{border:1px solid rgba(11,79,92,.2);background:rgba(255,255,255,.82);color:var(--teal-d);
+  box-shadow:0 6px 18px rgba(11,79,92,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.dock-btn.main{border:0;color:#3a0f22;background:linear-gradient(135deg,#ffb89f,#ff5f84);box-shadow:0 8px 24px rgba(255,95,132,.45)}
+.badge{background:#ff5f84;color:#3a0f22}
+.bottle:focus-visible,.dock-btn:focus-visible,.btn:focus-visible,.round:focus-visible,.install:focus-visible,.legal a:focus-visible{outline:3px solid var(--teal-d);outline-offset:3px}
+
+/* ================= LEMBAR (dialog), terang ================= */
+dialog{background:linear-gradient(180deg,#fffdf8,#fdf1e3);color:var(--foam)}
+dialog::backdrop{background:rgba(7,60,70,.45);backdrop-filter:blur(3px)}
+.grab{background:rgba(11,79,92,.25)}
+h2{color:var(--teal-d)}
+label,legend{color:#1d6270}
+input[type=text],textarea,#dlgAccount input[type=text],#dlgAccount input[type=email]{background:#fff;color:var(--foam);border:1.5px solid rgba(11,79,92,.3)}
+input:focus,textarea:focus,#dlgAccount input:focus{outline:none;border-color:var(--teal-m);box-shadow:0 0 0 3px rgba(43,179,176,.3)}
+dialog.chat textarea:focus{box-shadow:none}
+.count{color:#4d6f78}.count.warn{color:#b3274e}
+.hint{color:var(--teal-s)}
+.btn.primary{background:linear-gradient(135deg,#ffb89f,#ff5f84);color:#3a0f22}
+.btn.ghost{background:rgba(11,79,92,.07);border:1px solid rgba(11,79,92,.22);color:var(--teal-d)}
+.btn.danger{background:#b3274e;color:#fff}
+.btn:disabled,.dock-btn:disabled{opacity:.55}
+.steps li::before{background:rgba(255,95,132,.12);border-color:#e5557c;color:var(--teal-d)}
+.acct{background:rgba(11,79,92,.05);border:1px solid rgba(11,79,92,.14)}
+.acct-email{color:var(--teal-m)}
+.link-btn{color:var(--teal-m)}
+.acct-err{color:#b3274e}
+/* centang usia dan pilihan alasan laporan */
+.check{display:flex;gap:12px;align-items:flex-start;margin:18px 0 0;padding:12px;border-radius:14px;background:rgba(11,79,92,.06);font-size:14.5px;line-height:1.5;color:var(--foam)}
+.check input{flex:none;width:24px;height:24px;margin:0;accent-color:#0b6b78}
+.reasons{margin:12px 0 0;padding:0;border:0;display:grid;gap:4px}
+.reasons legend{padding:0;margin:0 0 4px}
+.opt{display:flex;gap:12px;align-items:center;margin:0;min-height:44px;padding:4px 8px;border-radius:12px;font-size:15px;color:var(--foam)}
+.opt input{flex:none;width:22px;height:22px;margin:0;accent-color:#0b6b78}
+.opt:has(input:checked){background:rgba(43,179,176,.14)}
+#rNote{margin-top:0}
+
+/* ================= CHAT: kontras dan tombol ================= */
+.chat-sub{color:#5f5f73}
+dialog.chat .bubble .bm{font-size:12px}
+dialog.chat .bubble.them .bm{color:#6b6b7d}
+.chat-status{margin:0 0 4px;padding:8px 12px;border-radius:12px;background:rgba(43,179,176,.12);color:#0b4f5c;font-size:13.5px;line-height:1.45}
+.chat-status:empty{display:none}
+.send.is-busy,.btn.is-busy{position:relative;color:transparent!important}
+.send.is-busy::after,.btn.is-busy::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  border:2.5px solid rgba(58,15,34,.3);border-top-color:#3a0f22;animation:spin .8s linear infinite}
+.btn.danger.is-busy::after{border-color:rgba(255,255,255,.4);border-top-color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-height:600px){.pill,.legal{display:none}}
+@media (min-width:700px){
+  .legal{bottom:128px}
+  .stage{width:max(100vw,calc(100dvh*.5631))}
+}
+@media (min-width:700px) and (hover:hover){
+  .dock-btn:hover{background:#fff;transform:translateY(-2px)}
+  .dock-btn.main:hover{background:linear-gradient(135deg,#ffc7b3,#ff7094)}
+  .round:hover,.install:hover{background:#fff;border-color:rgba(11,79,92,.5)}
+}
+
+/* ================= HEMAT ANIMASI ================= */
+@media (prefers-reduced-motion:reduce){
+  .glints i{animation:none;opacity:.55}
+  .wv,.wv svg{animation:none!important}.swell2{animation:none!important;opacity:0}
+  .bottle,.bottle .sway,.bottle .water,.thrown,.ring{animation:none!important}
+  .bottle::after{animation:none;opacity:.5}
+  .bottle .sway{transform:rotate(-8deg)}
+  .bottle:nth-child(even) .sway{transform:rotate(8deg)}
+  .thrown{display:none}
+  .send.is-busy::after,.btn.is-busy::after{animation-duration:2s}
+}
