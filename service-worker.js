@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v18';
+const CACHE = 'love-ocean-v19';
 
 const ASSETS = [
   '/', '/index.html',
