@@ -13,7 +13,7 @@
   // Kunci sesi dan nama tetap sama dengan versi sebelumnya supaya akun anonim lama tetap terbaca.
   const K = {
     session: 'loveocean.session.v2', name: 'loveocean.nick.v2', seen: 'loveocean.seen.v2',
-    draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3', age: 'loveocean.age.v1'
+    draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3', age: 'loveocean.age.v1', nudge: 'loveocean.nudge.v1'
   };
   const $ = (s) => document.querySelector(s);
 
@@ -44,7 +44,8 @@
     bottles_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
     replies_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
     pesan_kosong: 'Pesan tidak boleh kosong.',
-    tidak_boleh: 'Aksi ini tidak diizinkan untuk botol tersebut.'
+    tidak_boleh: 'Aksi ini tidak diizinkan untuk botol tersebut.',
+    captcha: 'Verifikasi keamanan gagal. Periksa koneksi, lalu muat ulang halaman.'
   };
 
   /* ---------- util ---------- */
@@ -106,6 +107,7 @@
   function diagnose(e) {
     const m = ((e && e.message) || '') + ' ' + ((e && e.code) || '');
     if (!navigator.onLine) return 'Kamu sedang offline. Sambungkan internet lalu coba lagi.';
+    if (/captcha/i.test(m)) return ERR.captcha;
     if (/anonymous sign-ins are disabled|anonymous.*disabled/i.test(m)) return 'Masuk anonim belum diaktifkan di Supabase (Authentication > Sign In / Providers > Allow anonymous sign-ins).';
     if (/proxy belum dikonfigurasi/i.test(m)) return 'Perantara belum diatur: isi SUPABASE_URL dan SUPABASE_KEY di pengaturan Cloudflare Pages, lalu deploy ulang.';
     if (/PGRST202|could not find the function/i.test(m)) return 'Database belum diperbarui. Jalankan supabase/schema.sql di SQL Editor Supabase.';
@@ -135,6 +137,57 @@
   // Tab lain memperbarui sesi: ikuti, jangan membuat akun sendiri.
   window.addEventListener('storage', (e) => { if (e.key === K.session) session = lsGet(K.session, null); });
 
+
+  /* ---------- Turnstile (aktif hanya bila TURNSTILE_SITE_KEY diisi di config.js; kosong = perilaku lama) ---------- */
+  const TS_KEY = CFG.TURNSTILE_SITE_KEY || '';
+  let tsLoad = null;
+  function loadTurnstile() {
+    if (window.turnstile) return Promise.resolve();
+    if (tsLoad) return tsLoad;
+    tsLoad = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => { tsLoad = null; s.remove(); reject(new Error('captcha_gagal')); };
+      document.head.appendChild(s);
+    });
+    return tsLoad;
+  }
+  // Satu token sekali pakai. Kotak tantangan memakai popover supaya tampil di atas dialog modal.
+  async function captchaToken() {
+    if (!TS_KEY) return '';
+    await loadTurnstile();
+    return new Promise((resolve, reject) => {
+      const box = document.createElement('div');
+      box.setAttribute('popover', 'manual');
+      box.style.border = '0'; box.style.padding = '0'; box.style.background = 'transparent'; box.style.overflow = 'visible';
+      document.body.appendChild(box);
+      try { box.showPopover(); } catch (e) { /* tanpa popover: tetap jalan */ }
+      let id = null, done = false, timer = null;
+      const finish = (fn, v) => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        try { if (id !== null) window.turnstile.remove(id); } catch (e) { /* abaikan */ }
+        try { box.hidePopover(); } catch (e) { /* abaikan */ }
+        box.remove();
+        fn(v);
+      };
+      timer = setTimeout(() => finish(reject, new Error('captcha_gagal')), 45000);
+      try {
+        id = window.turnstile.render(box, {
+          sitekey: TS_KEY, appearance: 'interaction-only',
+          callback: (t) => finish(resolve, t),
+          'error-callback': () => finish(reject, new Error('captcha_gagal'))
+        });
+      } catch (e) { finish(reject, new Error('captcha_gagal')); }
+    });
+  }
+  const captchaBody = async (extra) => {
+    const t = await captchaToken();
+    return t ? Object.assign({}, extra, { gotrue_meta_security: { captcha_token: t } }) : (extra || {});
+  };
+
   async function authCall(path, body) {
     const res = await fetch(BASE + '/auth/v1/' + path, {
       method: 'POST',
@@ -145,9 +198,17 @@
     if (!res.ok || !data.access_token) {
       const err = new Error(data.msg || data.error_description || data.message || 'auth_gagal');
       err.status = res.status;
+      err.code = data.error_code || (typeof data.error === 'string' ? data.error : '') || '';
       throw err;
     }
     return data;
+  }
+  // Sesi lama benar-benar ditolak server (token tidak ada, sudah dipakai, atau sesi dicabut).
+  // Gangguan jaringan, 5xx, atau 429 BUKAN alasan untuk membuang sesi.
+  function sessionRejected(e) {
+    if (![400, 401, 403, 404, 422].includes(e.status)) return false;
+    return /refresh_token_not_found|refresh_token_already_used|session_not_found|session_expired|invalid_grant/i.test(e.code || '') ||
+      /refresh token|invalid grant|session.*(not found|expired)/i.test(e.message || '');
   }
   function ensureSession() {
     if (isFresh(session)) return Promise.resolve(session);
@@ -165,7 +226,7 @@
           return session;
         } catch (e) {
           // Gangguan jaringan atau server tidak boleh mengganti akun.
-          if (!navigator.onLine || ![400, 401, 403, 404, 422].includes(e.status)) throw e;
+          if (!navigator.onLine || !sessionRejected(e)) throw e;
           // Ditolak: mungkin tab lain baru saja memutar token. Periksa penyimpanan sebelum menyerah.
           const again = lsGet(K.session, null);
           if (isFresh(again)) { session = again; return session; }
@@ -175,9 +236,12 @@
       }
       // Server jelas menolak sesi lama: buat akun anonim baru.
       const hadEmail = isEmailAccount(before) || isEmailAccount(session);
-      session = await authCall('signup', {});
+      const hadAny = !!((before && before.user) || (session && session.user));
+      session = await authCall('signup', await captchaBody());
       lsSet(K.session, session);
+      // Beri tahu SEMUA pengguna yang sebelumnya punya akun, bukan hanya akun email.
       if (hadEmail) setTimeout(() => toast('Sesi akunmu berakhir. Masuk lagi dengan email (tombol i) untuk membuka botolmu.', 7000), 300);
+      else if (hadAny) setTimeout(() => toast('Sesi anonimmu berakhir, jadi botol lama tidak bisa dibuka lagi. Simpan akun dengan email (tombol i) agar tidak terulang.', 9000), 300);
       return session;
     }).finally(() => { sessionJob = null; });
     return sessionJob;
@@ -400,6 +464,11 @@
         vib([10, 40, 10]);
         flyBottle(mood);
         toast('Botolmu hanyut ke laut. Jika ada yang menemukannya, balasan muncul di Botolku.', 4800);
+        // Sekali saja: ajak menyimpan akun supaya botol tidak hilang bila data browser terhapus.
+        if (!isEmailAccount(session) && !lsGet(K.nudge, false)) {
+          lsSet(K.nudge, true);
+          setTimeout(() => toast('Tips: simpan akunmu dengan email (tombol i) supaya botolmu tidak hilang saat berganti HP.', 7000), 5200);
+        }
         loadMine().catch(() => {});
         refreshSea();
       } catch (e) { toast(diagnose(e), 5000); }
@@ -957,13 +1026,13 @@
   window.LO = {
     get bottles() { return myBottles; },
     get replies() { return myReplyMeta; },
-    rpc, unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq,
+    rpc, unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq, captchaBody,
     get session() { return session; },
     setSession(s) { session = s; lsSet(K.session, s); },
     // dipanggil setelah masuk/menyimpan akun: muat ulang data milik akun ini
     afterAuth() { myBottles = []; myReplyMeta = []; updateBadge(); refreshSea(); loadMine().catch(() => {}); },
     async signOut() {
-      try { await authReq('POST', 'logout', null, true); } catch (e) { /* abaikan */ }
+      try { await authReq('POST', 'logout?scope=local', null, true); } catch (e) { /* abaikan */ }
       lsDel(K.session);
       session = null;
       myBottles = []; myReplyMeta = []; updateBadge();
