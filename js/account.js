@@ -15,6 +15,7 @@
   };
   function errText(e) {
     const m = ((e && e.message) || '') + ' ' + ((e && e.code) || '');
+    if (/captcha/i.test(m)) return 'Verifikasi keamanan gagal. Periksa koneksi, lalu coba lagi.';
     if (/over_email_send_rate_limit|rate limit|only request this after|too many/i.test(m)) return 'Terlalu banyak permintaan. Tunggu beberapa menit lalu coba lagi.';
     if (/email.*(invalid|valid)|validation/i.test(m)) return 'Alamat email tidak valid.';
     if (/otp_expired|expired|invalid|token/i.test(m)) return 'Kode salah atau sudah kedaluwarsa. Periksa kodenya atau kirim ulang.';
@@ -95,11 +96,11 @@
       if (mode === 'save') {
         try { await LO.authReq('PUT', 'user', { email }, true); }
         catch (e) {
-          if (exists(e)) { mode = 'login'; paintMode(); setErr('Email ini sudah terdaftar. Kami kirim kode masuk.'); await LO.authReq('POST', 'otp', { email, create_user: false }); }
+          if (exists(e)) { mode = 'login'; paintMode(); setErr('Email ini sudah terdaftar. Kami kirim kode masuk.'); await LO.authReq('POST', 'otp', await LO.captchaBody({ email, create_user: false })); }
           else throw e;
         }
       } else {
-        await LO.authReq('POST', 'otp', { email, create_user: false });
+        await LO.authReq('POST', 'otp', await LO.captchaBody({ email, create_user: false }));
       }
       $('#acctSent').textContent = 'Kode dikirim ke ' + email + '. Periksa kotak masuk dan folder spam.';
       showStep(2);
@@ -113,7 +114,7 @@
     setErr('');
     try {
       if (mode === 'save') await LO.authReq('PUT', 'user', { email }, true);
-      else await LO.authReq('POST', 'otp', { email, create_user: false });
+      else await LO.authReq('POST', 'otp', await LO.captchaBody({ email, create_user: false }));
       cooldown(60);
     } catch (e) { setErr(errText(e)); }
   }

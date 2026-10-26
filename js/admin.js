@@ -7,6 +7,56 @@
   const KEY = PROXY ? '' : (CFG.SUPABASE_KEY || '');
   const withKey = (h) => (KEY ? Object.assign({ apikey: KEY }, h) : h);
   const SESSION_KEY = 'loveocean.admin.v1';
+  /* ---------- Turnstile (aktif hanya bila TURNSTILE_SITE_KEY diisi di config.js; kosong = perilaku lama) ---------- */
+  const TS_KEY = CFG.TURNSTILE_SITE_KEY || '';
+  let tsLoad = null;
+  function loadTurnstile() {
+    if (window.turnstile) return Promise.resolve();
+    if (tsLoad) return tsLoad;
+    tsLoad = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => { tsLoad = null; s.remove(); reject(new Error('captcha_gagal')); };
+      document.head.appendChild(s);
+    });
+    return tsLoad;
+  }
+  // Satu token sekali pakai. Kotak tantangan memakai popover supaya tampil di atas dialog modal.
+  async function captchaToken() {
+    if (!TS_KEY) return '';
+    await loadTurnstile();
+    return new Promise((resolve, reject) => {
+      const box = document.createElement('div');
+      box.setAttribute('popover', 'manual');
+      box.style.border = '0'; box.style.padding = '0'; box.style.background = 'transparent'; box.style.overflow = 'visible';
+      document.body.appendChild(box);
+      try { box.showPopover(); } catch (e) { /* tanpa popover: tetap jalan */ }
+      let id = null, done = false, timer = null;
+      const finish = (fn, v) => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        try { if (id !== null) window.turnstile.remove(id); } catch (e) { /* abaikan */ }
+        try { box.hidePopover(); } catch (e) { /* abaikan */ }
+        box.remove();
+        fn(v);
+      };
+      timer = setTimeout(() => finish(reject, new Error('captcha_gagal')), 45000);
+      try {
+        id = window.turnstile.render(box, {
+          sitekey: TS_KEY, appearance: 'interaction-only',
+          callback: (t) => finish(resolve, t),
+          'error-callback': () => finish(reject, new Error('captcha_gagal'))
+        });
+      } catch (e) { finish(reject, new Error('captcha_gagal')); }
+    });
+  }
+  const captchaBody = async (extra) => {
+    const t = await captchaToken();
+    return t ? Object.assign({}, extra, { gotrue_meta_security: { captcha_token: t } }) : (extra || {});
+  };
+
   const $ = (s) => document.querySelector(s);
 
   const VERDICT = {
@@ -133,13 +183,13 @@
     const btn = $('#btnSend');
     btn.disabled = true; loginError('');
     try {
-      await authPost('otp', { email, create_user: false });
+      await authPost('otp', await captchaBody({ email, create_user: false }));
       loginEmail = email;
       $('#sentTo').textContent = 'Kode dikirim ke ' + email + '. Cek kotak masuk dan folder spam.';
       $('#step1').hidden = true; $('#step2').hidden = false;
       $('#code').focus();
     } catch (e) {
-      loginError(/signups not allowed|not found/i.test(e.message || '')
+      loginError(/captcha/i.test(e.message || '') ? 'Verifikasi keamanan gagal. Muat ulang halaman lalu coba lagi.' : /signups not allowed|not found/i.test(e.message || '')
         ? 'Email ini belum terdaftar. Masuk dulu di aplikasi lewat "Simpan akunku", lalu coba lagi.'
         : 'Kode gagal dikirim. Coba lagi sebentar lagi.');
     } finally { btn.disabled = false; }
