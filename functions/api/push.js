@@ -95,7 +95,9 @@ export async function onRequestPost({ request, env }) {
   if (!user || !user.id) return reply({ ok: false, error: 'tidak_boleh' }, 401);
 
   let body = {};
-  try { body = await request.json(); } catch (e) { /* kosong */ }
+  const raw = await request.text().catch(() => '');
+  if (raw.length > 2048) return reply({ ok: false, error: 'terlalu_besar' }, 413);
+  try { body = JSON.parse(raw); } catch (e) { /* kosong */ }
   if (!UUID.test(body.bottle_id || '')) return reply({ ok: false, error: 'tidak_valid' }, 400);
 
   // 2. Balasan terbaru milik pemanggil di botol ini. Harus baru, belum dihapus.

@@ -48,7 +48,7 @@ export async function onRequestPost({ request, env }) {
   const sb = (path, opt = {}) => fetch(base + path, {
     method: opt.method || 'GET',
     body: opt.body,
-    headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }
+    headers: Object.assign({ apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, opt.headers || {})
   });
 
   // 1. Siapa yang memanggil? Token dicek langsung ke Supabase.
@@ -60,20 +60,36 @@ export async function onRequestPost({ request, env }) {
   if (!user || !user.id) return reply({ ok: false, error: 'tidak_boleh' }, 401);
 
   let body = {};
-  try { body = await request.json(); } catch (e) { /* kosong */ }
+  const raw = await request.text().catch(() => '');
+  if (raw.length > 2048) return reply({ ok: false, error: 'terlalu_besar' }, 413);
+  try { body = JSON.parse(raw); } catch (e) { /* kosong */ }
 
   // 2. Laporan mana? Pelapor hanya boleh memeriksa laporannya sendiri; admin boleh memilih laporan mana pun.
   let report = null;
+  let byAdmin = false;
   if (UUID.test(body.report_id || '')) {
     const a = await (await sb('/rest/v1/admins?select=user_id&user_id=eq.' + user.id)).json().catch(() => []);
     if (!Array.isArray(a) || !a.length) return reply({ ok: false, error: 'tidak_boleh' }, 403);
     const r = await (await sb('/rest/v1/reports?select=*&id=eq.' + body.report_id)).json().catch(() => []);
     report = Array.isArray(r) ? r[0] : null;
+    byAdmin = true;
   } else if (UUID.test(body.bottle_id || '')) {
     const r = await (await sb('/rest/v1/reports?select=*&bottle_id=eq.' + body.bottle_id + '&reporter=eq.' + user.id)).json().catch(() => []);
     report = Array.isArray(r) ? r[0] : null;
   }
   if (!report) return reply({ ok: false, error: 'tidak_ditemukan' }, 404);
+
+  // 2b. Anggaran harian pemeriksaan AI (melindungi kuota Workers AI). Panggilan admin tidak dibatasi.
+  //     Laporan yang dilewati tetap masuk antrean admin. Atur batas lewat variabel AI_DAILY_LIMIT (bawaan 200).
+  if (!byAdmin) {
+    const daily = Number(env.AI_DAILY_LIMIT) || 200;
+    const since = new Date(Date.now() - 86400000).toISOString();
+    try {
+      const cres = await sb('/rest/v1/reports?select=id&limit=1&ai_at=gte.' + since, { headers: { Prefer: 'count=exact' } });
+      const total = Number((cres.headers.get('content-range') || '').split('/')[1]);
+      if (Number.isFinite(total) && total >= daily) return reply({ ok: true, skipped: 'anggaran_harian' });
+    } catch (e) { /* gagal menghitung: lanjutkan */ }
+  }
 
   // 3. Klaim satu kali: hanya laporan yang belum diperiksa dan masih terbuka. Mencegah pemeriksaan ganda dan biaya berlebih.
   const claimRes = await sb('/rest/v1/reports?id=eq.' + report.id + '&ai_status=is.null&status=eq.baru', {
