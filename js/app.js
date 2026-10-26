@@ -39,6 +39,7 @@
     limit_harian: 'Kamu sudah mengambil 15 botol hari ini. Coba lagi besok.',
     percakapan_penuh: 'Percakapan ini sudah mencapai 100 balasan.',
     limit_laporan: 'Terlalu banyak laporan atau blokir hari ini. Coba lagi besok.',
+    limit_kontak: 'Terlalu banyak pesan berisi nomor, akun, atau tautan hari ini. Coba lagi besok.',
     limit_lepas: 'Kamu terlalu sering melepas botol hari ini. Coba lagi besok.',
     percakapan_ditutup: 'Percakapan ini sudah ditutup. Pesan tidak bisa dikirim.',
     bottles_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
@@ -399,10 +400,30 @@
   }
   // Tautan, nomor telepon, atau akun media sosial: tampilkan peringatan sebelum mengirim.
   const CONTACT = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|net|org|id|my|co|io|me|xyz|link|app|info|site|online)\b|@[a-z0-9_.]{3,}|(?:\d[ .\-()]{0,2}){9,}|\b(?:whatsapp|telegram|instagram|tiktok|wa|ig)\b)/i;
-  function confirmContact(text) {
-    if (!CONTACT.test(text)) return Promise.resolve(true);
+  // Curhat yang menyiratkan keinginan menyakiti diri: tidak diblokir dan tidak dilaporkan; hanya ditawari bantuan.
+  const SELFHARM = /\b(bunuh diri|membunuh diri|mengakhiri hidup|akhiri hidup|ingin mati|pengen mati|nak mati|mahu mati|tidak ingin hidup|nggak mau hidup|gak mau hidup|tak mahu hidup|menyakiti diri|melukai diri|self[- ]?harm)\b/i;
+  const WARN_CONTACT = {
+    title: 'Hati-hati membagikan kontak',
+    body: 'Pesanmu tampaknya memuat tautan, nomor telepon, atau akun media sosial. Jangan bagikan data pribadi kepada orang yang belum kamu kenal, jangan mengirim uang, dan jangan membuka tautan yang mencurigakan.',
+    edit: 'Ubah pesan', send: 'Tetap kirim'
+  };
+  const WARN_CARE = {
+    title: 'Kamu tidak sendirian',
+    body: 'Pesanmu terdengar berat. Kalau kamu sedang berpikir untuk menyakiti diri, kamu pantas mendapat dukungan sekarang. Indonesia: telepon 119 lalu tekan 8 (layanan kesehatan jiwa Kemenkes). Malaysia: telepon 15555 (Talian HEAL). Jika dalam bahaya langsung, hubungi nomor darurat setempat atau orang yang kamu percaya. Pesanmu tetap bisa dikirim.',
+    edit: 'Ubah pesan', send: 'Kirim saja'
+  };
+  async function confirmContact(text) {
+    if (SELFHARM.test(text) && !(await confirmWarn(WARN_CARE))) return false;
+    if (!CONTACT.test(text)) return true;
+    return confirmWarn(WARN_CONTACT);
+  }
+  function confirmWarn(w) {
     return new Promise((resolve) => {
       const d = $('#dlgWarn');
+      $('#tWarn').textContent = w.title;
+      d.querySelector('.hint').textContent = w.body;
+      $('#warnEdit').textContent = w.edit;
+      $('#warnSend').textContent = w.send;
       let result = false;
       const send = () => { result = true; d.close(); };
       const edit = () => { result = false; d.close(); };
