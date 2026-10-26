@@ -141,7 +141,10 @@
     box.scrollTop = keep;
   }
 
+  let refreshing = false;
   async function refresh(showError) {
+    if (refreshing) return;
+    refreshing = true;
     try { await LO.loadMine(); if (isOpen) render(); }
     catch (e) {
       if (showError && isOpen) {
@@ -150,6 +153,7 @@
         box.appendChild(el('p', 'mine-empty', LO.human(e)));
       }
     }
+    finally { refreshing = false; }
   }
 
   function open() {
@@ -164,7 +168,10 @@
     if (LO.bottles.length) render();
     refresh(true);
     clearInterval(pollTimer);
-    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(false); }, 15000);
+    pollTimer = setInterval(() => {
+      // Saat percakapan terbuka, aplikasi sudah memeriksa balasannya sendiri.
+      if (document.visibilityState === 'visible' && navigator.onLine && !$('#dlgBottle').open) refresh(false);
+    }, 15000);
   }
   function hide() {
     if (!isOpen) return;

@@ -531,6 +531,13 @@
   /* ---------- satu botol ---------- */
   let cur = null;
   let pollTimer = null;
+  // Pemeriksaan balasan: 6 dtk saat ada kegiatan, makin jarang bila sepi (15 dtk, lalu 30 dtk), dan melambat saat server gagal.
+  let pollIdle = 0, pollFails = 0, pollBusy = false;
+  const pollDelay = () => Math.min(60000, (pollIdle < 10 ? 6000 : pollIdle < 40 ? 15000 : 30000) * Math.pow(2, Math.min(pollFails, 3)));
+  function schedulePoll() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => { await loadReplies(); if (cur) schedulePoll(); }, pollDelay());
+  }
 
   let threadSig = '';
   let editing = null;
@@ -683,8 +690,9 @@
     });
     return box;
   }
+  const sigOf = (replies) => replies.map((r) => r.id + ':' + (r.edited_at || '') + ':' + (r.deleted_at || '')).join('|');
   function renderThread(replies) {
-    const sig = replies.map((r) => r.id + ':' + (r.edited_at || '') + ':' + (r.deleted_at || '')).join('|');
+    const sig = sigOf(replies);
     if (sig === threadSig) return; // tidak ada perubahan: jangan gambar ulang (menu dan posisi gulir tetap)
     threadSig = sig;
     closeMsgMenu();
@@ -731,16 +739,24 @@
     t.style.overflowY = t.scrollHeight + border > 112 ? 'auto' : 'hidden';
   }
   async function loadReplies() {
-    if (!cur || document.visibilityState !== 'visible') return;
+    if (!cur || document.visibilityState !== 'visible' || !navigator.onLine || pollBusy) return;
     const id = cur.id;
+    pollBusy = true;
     try {
       const reps = await api('/rest/v1/replies?select=*&bottle_id=eq.' + encodeURIComponent(id) + '&order=created_at.asc');
-      if (cur && cur.id === id) { renderThread(reps); markSeen(id); }
-    } catch (e) { /* coba lagi pada putaran berikutnya */ }
+      if (cur && cur.id === id) {
+        const changed = sigOf(reps) !== threadSig;
+        pollIdle = changed ? 0 : pollIdle + 1;
+        pollFails = 0;
+        renderThread(reps); markSeen(id);
+      }
+    } catch (e) { pollFails += 1; /* coba lagi pada putaran berikutnya, lebih lambat */ }
+    finally { pollBusy = false; }
   }
   function openBottle(b) {
     cur = b;
     threadSig = '';
+    pollIdle = 0; pollFails = 0;
     closeMsgMenu();
     cancelEdit();
     cancelReply();
@@ -771,8 +787,7 @@
     growReply();
     $('#bScroll').scrollTop = 0;
     loadReplies();
-    clearInterval(pollTimer);
-    pollTimer = setInterval(loadReplies, 6000);
+    schedulePoll();
   }
   function doReply() {
     return once('reply', async () => {
@@ -804,7 +819,7 @@
       finally { setBusy(btn, false); }
     });
   }
-  function closeBottle() { clearInterval(pollTimer); pollTimer = null; cur = null; closeMsgMenu(); cancelEdit(); cancelReply(); }
+  function closeBottle() { clearTimeout(pollTimer); pollTimer = null; cur = null; closeMsgMenu(); cancelEdit(); cancelReply(); }
 
   /* tombol dua langkah supaya tidak tertekan tidak sengaja */
   function confirmBtn(btn, label, action) {
@@ -1057,7 +1072,7 @@
   $('#dlgWelcome').addEventListener('close', () => { if (!ageAccepted) setTimeout(() => openDlg($('#dlgWelcome')), 0); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      if (CONFIGURED && navigator.onLine) { refreshSea(); loadMine().catch(() => {}); loadReplies(); }
+      if (CONFIGURED && navigator.onLine) { pollIdle = 0; refreshSea(); loadMine().catch(() => {}); loadReplies(); }
       if (snd.on && snd.ctx) snd.ctx.resume();
     } else if (snd.ctx) { snd.ctx.suspend(); }
   });
@@ -1098,6 +1113,7 @@
   setInterval(() => {
     if (CONFIGURED && document.visibilityState === 'visible' && navigator.onLine) { refreshSea(); loadMine().catch(() => {}); }
   }, 60000);
+  window.addEventListener('online', () => { pollFails = 0; if (cur) loadReplies(); });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('/service-worker.js').catch(() => {}); });
