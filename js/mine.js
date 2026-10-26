@@ -179,8 +179,20 @@
   }
 
   $('#mineBack').addEventListener('click', close);
-  $('#mineFab').addEventListener('click', () => { close(); LO.openThrow(); });
-  window.addEventListener('popstate', () => { if (isOpen) { pushed = false; hide(); } });
+  $('#mineFab').addEventListener('click', () => {
+    const wasPushed = pushed;
+    close();
+    if (!wasPushed) { LO.openThrow(); return; }
+    // Tunggu riwayat selesai mundur supaya entri dialog baru tidak ikut terhapus.
+    let done = false;
+    const go = () => { if (done) return; done = true; LO.openThrow(); };
+    window.addEventListener('popstate', () => setTimeout(go, 0), { once: true });
+    setTimeout(go, 400);
+  });
+  window.addEventListener('popstate', () => {
+    if (window.LOBack && window.LOBack.swallow()) return;
+    if (isOpen) { pushed = false; hide(); }
+  });
   // setelah percakapan ditutup, kembali ke daftar dan perbarui tanda balasan baru
   $('#dlgBottle').addEventListener('close', () => { if (isOpen) { render(); refresh(false); } });
 

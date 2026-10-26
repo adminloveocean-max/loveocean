@@ -17,6 +17,37 @@
   };
   const $ = (s) => document.querySelector(s);
 
+  /* ---------- tombol Back Android: menutup dialog teratas, bukan keluar dari aplikasi ----------
+     Setiap dialog modal yang dibuka menambah satu entri riwayat; Back (popstate) menutup dialog teratas.
+     Bila dialog ditutup dengan cara lain (tombol, Esc), entri itu dibuang lagi. Dialog usia (dlgWelcome) tidak dilibatkan. */
+  const dlgStack = [];
+  let selfPops = 0, closingByBack = false, swallowNext = false;
+  const showModalRaw = HTMLDialogElement.prototype.showModal;
+  HTMLDialogElement.prototype.showModal = function () {
+    const was = this.open;
+    showModalRaw.call(this);
+    if (!was && this.id !== 'dlgWelcome') {
+      dlgStack.push(this);
+      try { history.pushState({ dlg: 1 }, ''); } catch (e) { dlgStack.pop(); }
+    }
+  };
+  document.addEventListener('close', (ev) => {
+    const i = dlgStack.indexOf(ev.target);
+    if (i < 0) return;
+    dlgStack.splice(i, 1);
+    if (closingByBack) { closingByBack = false; return; }
+    selfPops++;
+    try { history.back(); } catch (e) { selfPops--; }
+  }, true);
+  window.addEventListener('popstate', () => {
+    if (selfPops > 0) { selfPops--; swallowNext = true; return; }
+    const d = dlgStack[dlgStack.length - 1];
+    if (d) { swallowNext = true; closingByBack = true; d.close(); }
+  });
+  // Dipakai mine.js: true bila popstate barusan sudah diurus penutupan dialog.
+  window.LOBack = { swallow: () => { const v = swallowNext; swallowNext = false; return v; } };
+
+
   const MOODS = {
     cinta:    { label: 'Cinta',    color: '#ff5f84' },
     rindu:    { label: 'Rindu',    color: '#a98bff' },
