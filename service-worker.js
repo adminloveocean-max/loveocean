@@ -1,11 +1,13 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v19';
+const CACHE = 'love-ocean-v20';
+
+// Kunci cache halaman -> alamat bersih untuk diunduh saat pemasangan.
+const PAGE_URLS = { '/index.html': '/', '/privacy.html': '/privacy', '/tentang.html': '/tentang' };
 
 const ASSETS = [
-  '/', '/index.html',
   '/css/style.css', '/css/mine.css', '/css/account.css', '/css/chat.css', '/css/theme-day.css',
   '/js/config.js', '/js/app.js', '/js/mine.js', '/js/account.js', '/js/push.js',
-  '/privacy.html', '/tentang.html', '/css/privacy.css', '/manifest.json',
+  '/css/privacy.css', '/manifest.json',
   '/day/beach.webp',
   '/day/beach2.webp',
   '/icons/logoloveocean.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'
@@ -16,7 +18,18 @@ self.addEventListener('install', (e) => {
     caches.open(CACHE)
       // Satu per satu: file yang tidak ada tidak menggagalkan seluruh pemasangan.
       // cache: 'reload' memastikan yang disimpan adalah versi terbaru dari server.
-      .then((c) => Promise.allSettled(ASSETS.map((u) => c.add(new Request(u, { cache: 'reload' })))))
+      .then((c) => Promise.allSettled([
+        ...ASSETS.map((u) => c.add(new Request(u, { cache: 'reload' }))),
+        // Halaman: ambil alamat bersih (Cloudflare Pages mengalihkan /x.html ke /x), lalu simpan salinan TANPA tanda
+        // "redirected", sebab browser menolak memakai respons hasil alihan untuk navigasi saat offline.
+        ...Object.keys(PAGE_URLS).map((key) =>
+          fetch(new Request(PAGE_URLS[key], { cache: 'reload' })).then(async (res) => {
+            if (!res.ok) return;
+            const clean = new Response(await res.blob(), { status: 200, statusText: 'OK', headers: { 'Content-Type': res.headers.get('Content-Type') || 'text/html; charset=utf-8' } });
+            await c.put(key, clean);
+          })
+        )
+      ]))
       .then(() => self.skipWaiting())
   );
 });
