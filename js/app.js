@@ -291,7 +291,8 @@
         headers: withKey({
           Authorization: 'Bearer ' + s.access_token,
           'Content-Type': 'application/json',
-          Prefer: 'return=representation'
+          // Menulis tidak mengembalikan baris (ID akun tidak boleh terbaca dari tabel); membaca lewat view.
+          Prefer: (opt.method && opt.method !== 'GET') ? 'return=minimal' : 'return=representation'
         }),
         body: opt.body ? JSON.stringify(opt.body) : undefined
       });
@@ -418,8 +419,8 @@
       : { label: 'Kamu menemukan', detail: 'Balas dalam ' + daysLeft(b.caught_at || b.created_at, 3) + ' hari, atau botol ini kembali hanyut ke laut.' };
   }
   async function loadMine() {
-    myBottles = await api('/rest/v1/bottles?select=*&order=created_at.desc&limit=100');
-    myReplyMeta = await api('/rest/v1/replies?select=bottle_id,author,nickname,message,created_at,deleted_at&order=created_at.desc&limit=300');
+    myBottles = await api('/rest/v1/bottles_v?select=*&order=created_at.desc&limit=100');
+    myReplyMeta = await api('/rest/v1/replies_v?select=bottle_id,author,nickname,message,created_at,deleted_at&order=created_at.desc&limit=300');
     updateBadge();
   }
 
@@ -743,7 +744,7 @@
     const id = cur.id;
     pollBusy = true;
     try {
-      const reps = await api('/rest/v1/replies?select=*&bottle_id=eq.' + encodeURIComponent(id) + '&order=created_at.asc');
+      const reps = await api('/rest/v1/replies_v?select=*&bottle_id=eq.' + encodeURIComponent(id) + '&order=created_at.asc');
       if (cur && cur.id === id) {
         const changed = sigOf(reps) !== threadSig;
         pollIdle = changed ? 0 : pollIdle + 1;
