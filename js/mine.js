@@ -95,7 +95,7 @@
       const last = lastBy[b.id];
       let name;
       if (b.hidden) name = 'Sedang ditinjau';
-      else if (mine) name = b.caught_by ? (otherNick[b.id] || 'Seseorang') : 'Botol hanyut';
+      else if (mine) name = b.caught_by ? (otherNick[b.id] || 'Seseorang') : ((Number(b.catch_count) || 0) > 0 ? 'Botol hanyut (' + b.catch_count + ' penemu)' : 'Botol hanyut');
       else name = b.nickname || 'Seseorang di tepi laut';
       let text, ts;
       if (last) { text = (last.author === me ? 'Kamu: ' : '') + (last.deleted_at ? 'Pesan dihapus' : (last.message || '')); ts = last.created_at; }

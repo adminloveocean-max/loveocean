@@ -406,12 +406,15 @@
     if (b.hidden) return { label: 'Sedang ditinjau', detail: 'Botol ini disembunyikan dari laut sampai peninjauan selesai.' };
     if (mine && !b.caught_by) {
       const left = ' Hilang otomatis dalam ' + daysLeft(b.created_at, 14) + ' hari.';
+      const found = Number(b.catch_count) || 0;
+      if (found >= 5) return { label: 'Sudah ditemukan 5 orang', detail: 'Botolmu sudah ditemukan 5 orang dan tidak hanyut lagi. Setiap penemu punya obrolan pribadi sendiri di daftar Botolku.' };
+      if (found > 0) return { label: 'Hanyut, ditemukan ' + found + ' orang', detail: 'Botolmu sudah ditemukan ' + found + ' orang (maksimal 5) dan masih hanyut untuk yang lain. Setiap penemu punya obrolan pribadi sendiri di daftar Botolku.' + left };
       return n > 0
         ? { label: 'Hanyut lagi', detail: 'Botolmu pernah ditemukan lalu dilepas kembali' + (n > 1 ? ' (' + n + ' kali)' : '') + ', dan kini hanyut lagi. Percakapan sebelumnya dihapus.' + left }
         : { label: 'Hanyut', detail: 'Botolmu masih hanyut dan belum ditemukan.' + left };
     }
     if (mine) {
-      return { label: 'Ditemukan', detail: 'Seseorang menemukan botolmu. Percakapan hanya terlihat olehmu dan dia. Hilang otomatis dalam ' + daysLeft(b.caught_at || b.created_at, 30) + ' hari.' };
+      return { label: 'Ditemukan', detail: 'Seseorang menemukan botolmu. Percakapan ini pribadi, hanya terlihat olehmu dan dia. Hilang otomatis dalam ' + daysLeft(b.caught_at || b.created_at, 30) + ' hari.' };
     }
     const replied = myReplyMeta.some((r) => r.bottle_id === b.id);
     return replied
