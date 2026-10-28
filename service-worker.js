@@ -1,5 +1,5 @@
 // Naikkan angka versi ini setiap kali kamu mengunggah perubahan file, supaya cache lama dibuang.
-const CACHE = 'love-ocean-v24';
+const CACHE = 'love-ocean-v25';
 
 // Kunci cache halaman -> alamat bersih untuk diunduh saat pemasangan.
 const PAGE_URLS = { '/index.html': '/', '/privacy.html': '/privacy', '/tentang.html': '/tentang' };
