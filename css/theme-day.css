@@ -193,3 +193,7 @@ dialog.chat .bubble.them .bm{color:#6b6b7d}
   .thrown{display:none}
   .send.is-busy::after,.btn.is-busy::after{animation-duration:2s}
 }
+
+/* avatar laut, tema siang */
+.av-opt{background:rgba(11,107,120,.07)}
+.av-opt[aria-checked="true"]{border-color:#0b6b78;box-shadow:0 0 0 3px rgba(11,107,120,.25)}
