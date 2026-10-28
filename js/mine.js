@@ -85,10 +85,11 @@
     const me = LO.myId();
     const lastBy = {};
     const otherNick = {};
+    const otherAva = {};
     // balasan diurutkan terbaru dulu, jadi yang pertama ditemukan adalah yang terakhir
     LO.replies.forEach((r) => {
       if (!lastBy[r.bottle_id]) lastBy[r.bottle_id] = r;
-      if (r.author !== me && !(r.bottle_id in otherNick)) otherNick[r.bottle_id] = r.nickname || '';
+      if (r.author !== me && !(r.bottle_id in otherNick)) { otherNick[r.bottle_id] = r.nickname || ''; otherAva[r.bottle_id] = r.avatar || ''; }
     });
     return LO.bottles.map((b) => {
       const mine = b.author === me;
@@ -100,7 +101,8 @@
       let text, ts;
       if (last) { text = (last.author === me ? 'Kamu: ' : '') + (last.deleted_at ? 'Pesan dihapus' : (last.message || '')); ts = last.created_at; }
       else { text = (mine ? 'Kamu: ' : '') + (b.message || ''); ts = b.created_at; }
-      return { b, name, text: text.replace(/\s+/g, ' '), ts, unread: LO.unreadFor(b.id), stat: LO.statusOf(b).label };
+      const ava = b.hidden ? '' : (mine ? (b.caught_by ? otherAva[b.id] : '') : b.avatar);
+      return { b, name, ava, text: text.replace(/\s+/g, ' '), ts, unread: LO.unreadFor(b.id), stat: LO.statusOf(b).label };
     }).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts));
   }
 
@@ -120,7 +122,8 @@
       row.style.setProperty('--mood', LO.moodOf(e.b.mood).color);
       const ava = el('span', 'c-ava');
       ava.setAttribute('aria-hidden', 'true');
-      ava.appendChild(icon('i-heart'));
+      if (e.ava && LO.avatarOk(e.ava)) { ava.classList.add('has-av'); ava.appendChild(LO.avatarEl(e.ava, 'av')); }
+      else ava.appendChild(icon('i-heart'));
       const main = el('span', 'c-main');
       const top = el('span', 'c-top');
       top.appendChild(el('span', 'c-name', e.name));

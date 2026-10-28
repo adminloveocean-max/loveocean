@@ -13,9 +13,17 @@
   // Kunci sesi dan nama tetap sama dengan versi sebelumnya supaya akun anonim lama tetap terbaca.
   const K = {
     session: 'loveocean.session.v2', name: 'loveocean.nick.v2', seen: 'loveocean.seen.v2',
-    draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3', age: 'loveocean.age.v1', nudge: 'loveocean.nudge.v1'
+    avatar: 'loveocean.avatar.v1', draft: 'loveocean.draft.v3', welcome: 'loveocean.welcome.v3', sound: 'loveocean.sound.v3', age: 'loveocean.age.v1', nudge: 'loveocean.nudge.v1'
   };
   const $ = (s) => document.querySelector(s);
+
+  /* ---------- avatar laut (10 pilihan bawaan; hanya kodenya yang dikirim ke server) ---------- */
+  const AVATARS = [
+    ['paus', 'Paus'], ['penyu', 'Penyu'], ['kepiting', 'Kepiting'], ['ubur', 'Ubur-ubur'], ['bintang', 'Bintang laut'],
+    ['kerang', 'Kerang'], ['gurita', 'Gurita'], ['ikan', 'Ikan'], ['kudalaut', 'Kuda laut'], ['camar', 'Camar']
+  ];
+  const AVA_OK = new Set(AVATARS.map((a) => a[0]));
+  const avatarOk = (c) => typeof c === 'string' && AVA_OK.has(c);
 
   /* ---------- tombol Back Android: menutup dialog teratas, bukan keluar dari aplikasi ----------
      Setiap dialog modal yang dibuka menambah satu entri riwayat; Back (popstate) menutup dialog teratas.
@@ -121,6 +129,48 @@
     return n;
   }
   const SVGNS = 'http://www.w3.org/2000/svg';
+  function avatarEl(code, cls) {
+    const s = useSvg('av-' + code, '0 0 48 48');
+    s.setAttribute('class', cls || 'av');
+    return s;
+  }
+  function myAvatar() { const v = lsGet(K.avatar, ''); return avatarOk(v) ? v : ''; }
+  function paintPickers() {
+    const cur = myAvatar();
+    document.querySelectorAll('.av-opt').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.code === cur)));
+  }
+  function buildPickers() {
+    document.querySelectorAll('.av-pick').forEach((box) => {
+      box.textContent = '';
+      AVATARS.forEach((a) => {
+        const b = el('button', 'av-opt');
+        b.type = 'button';
+        b.dataset.code = a[0];
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-label', a[1]);
+        b.title = a[1];
+        b.appendChild(avatarEl(a[0], 'av'));
+        b.addEventListener('click', () => {
+          if (myAvatar() === a[0]) lsDel(K.avatar); else lsSet(K.avatar, a[0]);
+          paintPickers();
+        });
+        box.appendChild(b);
+      });
+    });
+    paintPickers();
+  }
+  function setHeadAva(code) {
+    const h = $('#bAvatar');
+    if (!h) return;
+    h.textContent = '';
+    if (avatarOk(code)) { h.classList.add('has-av'); h.appendChild(avatarEl(code, 'av')); }
+    else {
+      h.classList.remove('has-av');
+      const ic = useSvg('i-heart', '0 0 24 24');
+      ic.setAttribute('class', 'ic');
+      h.appendChild(ic);
+    }
+  }
   function useSvg(id, viewBox) {
     const s = document.createElementNS(SVGNS, 'svg');
     s.setAttribute('viewBox', viewBox);
@@ -423,7 +473,7 @@
   }
   async function loadMine() {
     myBottles = await api('/rest/v1/bottles_v?select=*&order=created_at.desc&limit=100');
-    myReplyMeta = await api('/rest/v1/replies_v?select=bottle_id,author,nickname,message,created_at,deleted_at&order=created_at.desc&limit=300');
+    myReplyMeta = await api('/rest/v1/replies_v?select=bottle_id,author,nickname,avatar,message,created_at,deleted_at&order=created_at.desc&limit=300');
     updateBadge();
   }
 
@@ -513,7 +563,7 @@
       const btn = $('#doThrow');
       setBusy(btn, true);
       try {
-        await api('/rest/v1/bottles', { method: 'POST', body: { nickname: name, message: text, mood } });
+        await api('/rest/v1/bottles', { method: 'POST', body: { nickname: name, avatar: myAvatar(), message: text, mood } });
         lsSet(K.name, name);
         lsDel(K.draft);
         $('#dlgThrow').close();
@@ -715,7 +765,9 @@
       row.dataset.id = r.id;
       if (r.reply_to && !gone) row.appendChild(quoteBlock(byId[r.reply_to]));
       row.appendChild(el('p', 'bt', gone ? (mine ? 'Kamu menghapus pesan ini' : 'Pesan ini telah dihapus') : r.message));
-      row.appendChild(el('span', 'bm', (mine ? 'Kamu' : (r.nickname || 'Anonim')) + ', ' + clock(r.created_at) + (r.edited_at && !gone ? ' · diedit' : '')));
+      const bm = el('span', 'bm', (mine ? 'Kamu' : (r.nickname || 'Anonim')) + ', ' + clock(r.created_at) + (r.edited_at && !gone ? ' · diedit' : ''));
+      if (!gone && avatarOk(r.avatar)) bm.insertBefore(avatarEl(r.avatar, 'av-mini'), bm.firstChild);
+      row.appendChild(bm);
       row.tabIndex = 0;
       row.setAttribute('role', 'button');
       row.setAttribute('aria-haspopup', 'menu');
@@ -725,6 +777,11 @@
       row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') open(ev); });
       t.appendChild(row);
     });
+    // Pembuat botol: avatar di kepala obrolan = avatar penemu terakhir yang membalas (bila ada).
+    if (cur && cur.author === myId()) {
+      const other = replies.slice().reverse().find((x) => x.author !== myId() && !x.deleted_at && avatarOk(x.avatar));
+      setHeadAva(other ? other.avatar : '');
+    }
     if (keep) toBottom();
   }
   function toBottom() {
@@ -770,11 +827,13 @@
     $('#bNote').style.setProperty('--mood', m.color);
     $('#bNote').className = 'bubble first ' + (iAmAuthor ? 'me' : 'them');
     $('#bAvatar').style.setProperty('--mood', m.color);
+    setHeadAva(iAmAuthor ? '' : b.avatar);
     $('#tBottle').textContent = iAmAuthor ? 'Botol yang kamu lempar' : (b.nickname || 'Seseorang di tepi laut');
     $('#bText').textContent = b.message;
     $('#bFrom').textContent = iAmAuthor
       ? 'Dari kamu' + (b.nickname ? ' (' + b.nickname + ')' : '') + ', ' + ago(b.created_at)
       : 'Dari ' + (b.nickname || 'seseorang di tepi laut') + ', ' + ago(b.created_at);
+    if (avatarOk(b.avatar)) $('#bFrom').insertBefore(avatarEl(b.avatar, 'av-mini'), $('#bFrom').firstChild);
     $('#bRelease').hidden = iAmAuthor;
     $('#bDelete').hidden = !iAmAuthor;
     $('#bReport').hidden = !!b.hidden || (iAmAuthor && !b.caught_by);
@@ -808,7 +867,7 @@
           await rpc('edit_reply', { p_id: editing.id, p_message: text });
           cancelEdit();
         } else {
-          const body = { bottle_id: cur.id, nickname: lsGet(K.name, ''), message: text };
+          const body = { bottle_id: cur.id, nickname: lsGet(K.name, ''), avatar: myAvatar(), message: text };
           if (replyTo) body.reply_to = replyTo.id; // dikirim hanya saat membalas pesan tertentu
           await api('/rest/v1/replies', { method: 'POST', body });
           requestPush(cur.id);
@@ -949,7 +1008,8 @@
   confirmBtn($('#btnWipe'), 'Hapus semua data saya', async () => {
     try {
       await rpc('delete_my_data');
-      [K.session, K.name, K.seen, K.draft].forEach(lsDel);
+      [K.session, K.name, K.avatar, K.seen, K.draft].forEach(lsDel);
+      paintPickers();
       session = null;
       Object.keys(seen).forEach((k) => delete seen[k]);
       $('#dlgInfo').close();
@@ -1097,6 +1157,7 @@
   window.LO = {
     get bottles() { return myBottles; },
     get replies() { return myReplyMeta; },
+    avatarEl, avatarOk,
     rpc, unreadFor, myId, moodOf, ago, statusOf, loadMine, openBottle, removeBottle, human, openThrow, toast, openDlg, authReq, captchaBody,
     get session() { return session; },
     setSession(s) { session = s; lsSet(K.session, s); },
@@ -1112,6 +1173,7 @@
   };
 
   updateCount();
+  buildPickers();
   start();
   if (!ageAccepted) openDlg($('#dlgWelcome'));
   setInterval(() => {
