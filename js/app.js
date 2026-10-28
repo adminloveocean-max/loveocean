@@ -85,7 +85,9 @@
     replies_message_len: 'Pesan harus berisi 1 sampai 280 karakter.',
     pesan_kosong: 'Pesan tidak boleh kosong.',
     tidak_boleh: 'Aksi ini tidak diizinkan untuk botol tersebut.',
-    captcha: 'Verifikasi keamanan gagal. Periksa koneksi, lalu muat ulang halaman.'
+    captcha: 'Verifikasi keamanan gagal. Periksa koneksi, lalu muat ulang halaman.',
+    limit_avatar: 'Terlalu sering mengganti avatar. Coba lagi dalam beberapa menit.',
+    avatar_tidak_valid: 'Avatar tidak dikenal.'
   };
 
   /* ---------- util ---------- */
@@ -153,11 +155,46 @@
         b.addEventListener('click', () => {
           if (myAvatar() === a[0]) lsDel(K.avatar); else lsSet(K.avatar, a[0]);
           paintPickers();
+          queueAvatarSync();
         });
         box.appendChild(b);
       });
     });
     paintPickers();
+  }
+  // Mengganti avatar mengubah avatar di semua botol dan balasanmu yang lama (di server), supaya satu obrolan
+  // tidak tampak seperti dua orang. Ditunda sebentar supaya ketukan beruntun hanya dikirim sekali.
+  let avaTimer = null, avaBusy = false, avaAgain = false;
+  function queueAvatarSync() {
+    clearTimeout(avaTimer);
+    avaTimer = setTimeout(syncAvatar, 600);
+  }
+  async function syncAvatar() {
+    if (!CONFIGURED || !session) return;
+    if (avaBusy) { avaAgain = true; return; }
+    avaBusy = true;
+    try {
+      await rpc('set_my_avatar', { p_avatar: myAvatar() });
+      await loadMine().catch(() => {});
+      if (cur) { const fresh = myBottles.find((x) => x.id === cur.id); if (fresh) cur = fresh; pollBusy = false; await loadReplies(); paintPartnerAva(lastReplies); }
+    } catch (e) { toast(human(e), 4500); }
+    finally {
+      avaBusy = false;
+      if (avaAgain) { avaAgain = false; queueAvatarSync(); }
+    }
+  }
+  // Lawan bicara = penulis balasan terakhir selain kamu; avatarnya dipakai di kepala obrolan dan pesan pembuka.
+  function paintPartnerAva(replies) {
+    if (!cur) return;
+    const iAmAuthor = cur.author === myId();
+    const other = replies.slice().reverse().find((x) => x.author !== myId() && !x.deleted_at && avatarOk(x.avatar));
+    const partner = other ? other.avatar : (iAmAuthor ? '' : cur.avatar);
+    setHeadAva(partner);
+    const from = $('#bFrom');
+    const old = from.querySelector('.av-mini');
+    if (old) old.remove();
+    const first = iAmAuthor ? myAvatar() : cur.avatar;
+    if (avatarOk(first)) from.insertBefore(avatarEl(first, 'av-mini'), from.firstChild);
   }
   function setHeadAva(code) {
     const h = $('#bAvatar');
@@ -744,8 +781,10 @@
     });
     return box;
   }
-  const sigOf = (replies) => replies.map((r) => r.id + ':' + (r.edited_at || '') + ':' + (r.deleted_at || '')).join('|');
+  const sigOf = (replies) => replies.map((r) => r.id + ':' + (r.edited_at || '') + ':' + (r.deleted_at || '') + ':' + (r.avatar || '')).join('|');
+  let lastReplies = [];
   function renderThread(replies) {
+    lastReplies = replies;
     const sig = sigOf(replies);
     if (sig === threadSig) return; // tidak ada perubahan: jangan gambar ulang (menu dan posisi gulir tetap)
     threadSig = sig;
@@ -777,11 +816,7 @@
       row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') open(ev); });
       t.appendChild(row);
     });
-    // Pembuat botol: avatar di kepala obrolan = avatar penemu terakhir yang membalas (bila ada).
-    if (cur && cur.author === myId()) {
-      const other = replies.slice().reverse().find((x) => x.author !== myId() && !x.deleted_at && avatarOk(x.avatar));
-      setHeadAva(other ? other.avatar : '');
-    }
+    paintPartnerAva(replies);
     if (keep) toBottom();
   }
   function toBottom() {
@@ -827,6 +862,7 @@
     $('#bNote').style.setProperty('--mood', m.color);
     $('#bNote').className = 'bubble first ' + (iAmAuthor ? 'me' : 'them');
     $('#bAvatar').style.setProperty('--mood', m.color);
+    lastReplies = [];
     setHeadAva(iAmAuthor ? '' : b.avatar);
     $('#tBottle').textContent = iAmAuthor ? 'Botol yang kamu lempar' : (b.nickname || 'Seseorang di tepi laut');
     $('#bText').textContent = b.message;
